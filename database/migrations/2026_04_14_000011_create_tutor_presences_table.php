@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('class_session_id')->constrained()->cascadeOnDelete();
             $table->foreignId('tutor_id')->constrained()->cascadeOnDelete();
             $table->enum('status', ['presence', 'absent', 'permission', 'sick']);
+            $table->decimal('amount', 15, 2)->default(0); // snapshot gaji per sesi
             $table->timestamps();
         });
     }

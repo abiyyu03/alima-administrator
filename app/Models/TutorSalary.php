@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class TutorSalary extends Model
 {
-    protected $fillable = ['tutor_id', 'salary'];
+    protected $fillable = ['tutor_id', 'tutor_presence_id', 'salary'];
 
     protected function casts(): array
     {
@@ -18,5 +18,10 @@ class TutorSalary extends Model
     public function tutor()
     {
         return $this->belongsTo(Tutor::class);
+    }
+
+    public function presence()
+    {
+        return $this->belongsTo(TutorPresence::class, 'tutor_presence_id');
     }
 }

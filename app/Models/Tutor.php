@@ -15,23 +15,25 @@ class Tutor extends Model
         ];
     }
 
-    public function subjects()
+    public function classes()
     {
-        return $this->belongsToMany(Subject::class, 'tutor_subjects');
+        return $this->belongsToMany(SchoolClass::class, 'tutor_classes', 'tutor_id', 'class_id')
+                    ->withPivot('amount')
+                    ->withTimestamps();
     }
 
-    public function tutorSubjects()
+    public function tutorClasses()
     {
-        return $this->hasMany(TutorSubject::class);
-    }
-
-    public function salaries()
-    {
-        return $this->hasMany(TutorSalary::class);
+        return $this->hasMany(TutorClass::class);
     }
 
     public function presences()
     {
         return $this->hasMany(TutorPresence::class);
+    }
+
+    public function user()
+    {
+        return $this->hasOne(User::class);
     }
 }

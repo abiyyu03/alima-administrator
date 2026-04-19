@@ -13,6 +13,8 @@ return new class extends Migration
             $table->string('name');
             $table->foreignId('grade_id')->constrained()->cascadeOnDelete();
             $table->foreignId('course_type_id')->constrained()->cascadeOnDelete();
+            // Hanya diisi untuk course_type private — menunjuk ke mata pelajaran yang diajarkan
+            $table->foreignId('subject_id')->nullable()->constrained()->nullOnDelete();
             $table->timestamps();
         });
     }
