@@ -104,6 +104,7 @@
                 </td>
                 <td class="px-4 py-3 text-right">
                     <div class="flex items-center justify-end gap-2">
+                        <x-btn href="{{ route('pupils.presences', $pupil) }}" size="sm" variant="outline">Presensi</x-btn>
                         <x-btn href="{{ route('pupils.edit', $pupil) }}" size="sm" variant="outline">Edit</x-btn>
                         <form method="POST" action="{{ route('pupils.destroy', $pupil) }}"
                             onsubmit="return confirm('Hapus siswa {{ $pupil->name }}?')">

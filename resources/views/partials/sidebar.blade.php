@@ -2,6 +2,8 @@
     Mobile  : fixed drawer, slides in from left (translate-x), hidden by default
     Desktop : static sidebar, always visible
 --}}
+@php $isTutor = auth()->user()?->isTutor(); @endphp
+
 <aside id="sidebar"
        class="fixed inset-y-0 left-0 z-30 w-64 bg-green-900 text-white flex flex-col flex-shrink-0
               -translate-x-full transition-transform duration-300 ease-in-out
@@ -19,62 +21,64 @@
             Dashboard
         </x-sidebar-link>
 
-        {{-- Master Data --}}
-        <x-sidebar-group label="Master Data">
-            <x-sidebar-link href="{{ route('grades.index') }}" icon="academic-cap" :active="request()->routeIs('grades.*')">
-                Tingkatan (Grade)
-            </x-sidebar-link>
-            <x-sidebar-link href="{{ route('course-types.index') }}" icon="tag" :active="request()->routeIs('course-types.*')">
-                Jenis Kursus
-            </x-sidebar-link>
-            <x-sidebar-link href="{{ route('subjects.index') }}" icon="book-open" :active="request()->routeIs('subjects.*')">
-                Mata Pelajaran
-            </x-sidebar-link>
-            <x-sidebar-link href="{{ route('classes.index') }}" icon="building-library" :active="request()->routeIs('classes.*')">
-                Kelas
-            </x-sidebar-link>
-        </x-sidebar-group>
+        @if($isTutor)
+            {{-- Tutor: hanya lihat presensi sendiri --}}
+            <x-sidebar-group label="Presensi">
+                <x-sidebar-link href="{{ route('my-presences') }}" icon="clipboard-document-check" :active="request()->routeIs('my-presences*')">
+                    Presensi Saya
+                </x-sidebar-link>
+            </x-sidebar-group>
+        @else
+            {{-- Admin / Superadmin --}}
 
-        {{-- Tutor --}}
-        <x-sidebar-group label="Tutor">
-            <x-sidebar-link href="{{ route('tutors.index') }}" icon="user-group" :active="request()->routeIs('tutors.*')">
-                Data Tutor
-            </x-sidebar-link>
-            <x-sidebar-link href="{{ route('tutor-salaries.index') }}" icon="banknotes" :active="request()->routeIs('tutor-salaries.*')">
-                Gaji Tutor
-            </x-sidebar-link>
-            @if(auth()->user()?->isTutor())
-            <x-sidebar-link href="{{ route('my-presences') }}" icon="clipboard-document-check" :active="request()->routeIs('my-presences*')">
-                Presensi Saya
-            </x-sidebar-link>
-            @else
-            <x-sidebar-link href="{{ route('tutor-presences.index') }}" icon="clipboard-document-check" :active="request()->routeIs('tutor-presences.*')">
-                Presensi Tutor
-            </x-sidebar-link>
+            {{-- Master Data --}}
+            <x-sidebar-group label="Master Data">
+                <x-sidebar-link href="{{ route('grades.index') }}" icon="academic-cap" :active="request()->routeIs('grades.*')">
+                    Tingkatan (Grade)
+                </x-sidebar-link>
+                <x-sidebar-link href="{{ route('course-types.index') }}" icon="tag" :active="request()->routeIs('course-types.*')">
+                    Jenis Kursus
+                </x-sidebar-link>
+                <x-sidebar-link href="{{ route('subjects.index') }}" icon="book-open" :active="request()->routeIs('subjects.*')">
+                    Mata Pelajaran
+                </x-sidebar-link>
+                <x-sidebar-link href="{{ route('classes.index') }}" icon="building-library" :active="request()->routeIs('classes.*')">
+                    Kelas
+                </x-sidebar-link>
+            </x-sidebar-group>
+
+            {{-- Tutor --}}
+            <x-sidebar-group label="Tutor">
+                <x-sidebar-link href="{{ route('tutors.index') }}" icon="user-group" :active="request()->routeIs('tutors.*')">
+                    Data Tutor
+                </x-sidebar-link>
+                <x-sidebar-link href="{{ route('tutor-salaries.index') }}" icon="banknotes" :active="request()->routeIs('tutor-salaries.*')">
+                    Gaji Tutor
+                </x-sidebar-link>
+                <x-sidebar-link href="{{ route('tutor-presences.index') }}" icon="clipboard-document-check" :active="request()->routeIs('tutor-presences.*')">
+                    Presensi Tutor
+                </x-sidebar-link>
+            </x-sidebar-group>
+
+            {{-- Siswa --}}
+            <x-sidebar-group label="Siswa">
+                <x-sidebar-link href="{{ route('pupils.index') }}" icon="users" :active="request()->routeIs('pupils.*')">
+                    Data Siswa
+                </x-sidebar-link>
+                <x-sidebar-link href="{{ route('pupil-presences.index') }}" icon="clipboard-document-check" :active="request()->routeIs('pupil-presences.*')">
+                    Presensi Siswa
+                </x-sidebar-link>
+            </x-sidebar-group>
+
+            {{-- Pengaturan (superadmin only) --}}
+            @if(auth()->user()?->role?->name === 'superadmin')
+            <x-sidebar-group label="Pengaturan">
+                <x-sidebar-link href="{{ route('users.index') }}" icon="cog-6-tooth" :active="request()->routeIs('users.*')">
+                    Manajemen User
+                </x-sidebar-link>
+            </x-sidebar-group>
             @endif
-        </x-sidebar-group>
 
-        {{-- Siswa --}}
-        <x-sidebar-group label="Siswa">
-            <x-sidebar-link href="{{ route('pupils.index') }}" icon="users" :active="request()->routeIs('pupils.*')">
-                Data Siswa
-            </x-sidebar-link>
-        </x-sidebar-group>
-
-        {{-- Sesi & Presensi --}}
-        <x-sidebar-group label="Sesi & Presensi">
-            <x-sidebar-link href="{{ route('class-sessions.index') }}" icon="calendar-days" :active="request()->routeIs('class-sessions.*')">
-                Sesi Kelas
-            </x-sidebar-link>
-        </x-sidebar-group>
-
-        {{-- Pengaturan --}}
-        @if(auth()->user()?->role?->name === 'admin')
-        <x-sidebar-group label="Pengaturan">
-            <x-sidebar-link href="{{ route('users.index') }}" icon="cog-6-tooth" :active="request()->routeIs('users.*')">
-                Manajemen User
-            </x-sidebar-link>
-        </x-sidebar-group>
         @endif
 
     </nav>
