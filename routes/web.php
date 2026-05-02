@@ -50,7 +50,13 @@ Route::middleware(['auth', 'role'])->group(function () {
 
     Route::prefix('class-sessions/{classSession}')->name('class-sessions.')->group(function () {
         Route::resource('pupil-presences', PupilPresenceController::class)
-            ->only(['index', 'store', 'update', 'destroy']);
+            ->only(['index', 'store', 'update', 'destroy'])
+            ->names([
+                'index'   => 'pupil-presences.index',
+                'store'   => 'pupil-presences.store',
+                'update'  => 'pupil-presences.update',
+                'destroy' => 'pupil-presences.destroy',
+            ]);
     });
 
     // Manajemen User & Rekap (superadmin only)
