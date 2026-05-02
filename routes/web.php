@@ -16,6 +16,7 @@ use App\Http\Controllers\RekapPresenceController;
 use App\Http\Controllers\RekapPupilPresenceController;
 
 Route::get('/', fn() => redirect()->route('dashboard'));
+Route::get('/offline', fn() => view('offline'))->name('offline');
 
 Route::middleware(['auth', 'role'])->group(function () {
 
