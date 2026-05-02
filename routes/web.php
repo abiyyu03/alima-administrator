@@ -61,7 +61,7 @@ Route::middleware(['auth', 'role'])->group(function () {
 
     // Manajemen User & Rekap (superadmin only)
     Route::middleware(['role:admin'])->group(function () {
-        Route::resource('users', UserController::class);
+        Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::get('rekap-presence', [RekapPresenceController::class, 'index'])->name('rekap-presence.index');
         Route::get('rekap-pupil', [RekapPupilPresenceController::class, 'index'])->name('rekap-pupil.index');
     });
