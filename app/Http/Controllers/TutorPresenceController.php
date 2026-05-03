@@ -8,6 +8,7 @@ use App\Models\TutorPresence;
 use App\Models\TutorSalary;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -36,11 +37,11 @@ class TutorPresenceController extends Controller
         $tutors = Tutor::orderBy('name')->get();
 
         $sessions = ClassSession::with([
-                'schoolClass.grade',
-                'schoolClass.courseType',
-                'tutorPresences.tutor',
-                'pupilPresences',
-            ])
+            'schoolClass.grade',
+            'schoolClass.courseType',
+            'tutorPresences.tutor',
+            'pupilPresences',
+        ])
             ->whereBetween('date', [$weekStart, $weekEnd])
             ->when($tutorId, fn($q) => $q->whereHas('tutorPresences', fn($q2) => $q2->where('tutor_id', $tutorId)))
             ->orderBy('date')
@@ -56,7 +57,13 @@ class TutorPresenceController extends Controller
         }
 
         return view('tutor-presences.index', compact(
-            'tutors', 'sessions', 'weekStart', 'weekEnd', 'tutorId', 'dateFrom', 'dateTo'
+            'tutors',
+            'sessions',
+            'weekStart',
+            'weekEnd',
+            'tutorId',
+            'dateFrom',
+            'dateTo'
         ));
     }
 
@@ -113,7 +120,7 @@ class TutorPresenceController extends Controller
      */
     public function myPresences(Request $request)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         $tutor = $user->tutor;
 
         if (! $tutor) {
@@ -135,10 +142,10 @@ class TutorPresenceController extends Controller
 
         $classIds = $classes->pluck('id');
         $sessions = ClassSession::with([
-                'schoolClass.courseType',
-                'pupilPresences',
-                'tutorPresences' => fn($q) => $q->where('tutor_id', $tutor->id),
-            ])
+            'schoolClass.courseType',
+            'pupilPresences',
+            'tutorPresences' => fn($q) => $q->where('tutor_id', $tutor->id),
+        ])
             ->whereIn('class_id', $classIds)
             ->whereBetween('date', [$weekStart, $weekEnd])
             ->orderBy('date')
@@ -163,7 +170,13 @@ class TutorPresenceController extends Controller
             ->groupBy(fn($p) => Carbon::parse($p->classSession->date)->startOfWeek(Carbon::MONDAY)->format('Y-m-d'));
 
         return view('tutor-presences.my', compact(
-            'tutor', 'classes', 'sessions', 'weekStart', 'weekEnd', 'statsWeek', 'history'
+            'tutor',
+            'classes',
+            'sessions',
+            'weekStart',
+            'weekEnd',
+            'statsWeek',
+            'history'
         ));
     }
 
@@ -172,7 +185,7 @@ class TutorPresenceController extends Controller
      */
     public function storeMySession(Request $request)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         $tutor = $user->tutor;
 
         if (! $tutor) abort(403);
@@ -243,7 +256,7 @@ class TutorPresenceController extends Controller
      */
     public function updateMyPresence(Request $request, TutorPresence $presence)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         $tutor = $user->tutor;
 
         if (! $tutor || $presence->tutor_id !== $tutor->id) abort(403);
