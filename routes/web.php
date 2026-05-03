@@ -12,6 +12,7 @@ use App\Http\Controllers\PupilController;
 use App\Http\Controllers\TutorPresenceController;
 use App\Http\Controllers\PupilPresenceController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\RekapPresenceController;
 use App\Http\Controllers\RekapPupilPresenceController;
 
@@ -58,6 +59,10 @@ Route::middleware(['auth', 'role'])->group(function () {
                 'destroy' => 'pupil-presences.destroy',
             ]);
     });
+
+    Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
+    Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::put('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
 
     // Manajemen User & Rekap (superadmin only)
     Route::middleware(['role:admin'])->group(function () {

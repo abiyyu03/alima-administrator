@@ -70,16 +70,21 @@
                 </x-sidebar-link>
             </x-sidebar-group>
 
-            {{-- Pengaturan (superadmin only) --}}
+            {{-- Daftar User (superadmin only) --}}
             @if(auth()->user()?->role?->name === 'superadmin')
             <x-sidebar-group label="Pengaturan">
-                <x-sidebar-link href="{{ route('users.index') }}" icon="cog-6-tooth" :active="request()->routeIs('users.*')">
-                    Manajemen User
+                <x-sidebar-link href="{{ route('users.index') }}" icon="users" :active="request()->routeIs('users.*')">
+                    Daftar User
                 </x-sidebar-link>
             </x-sidebar-group>
             @endif
 
         @endif
+
+        {{-- Pengaturan (semua role) --}}
+        <x-sidebar-link href="{{ route('settings.index') }}" icon="cog-6-tooth" :active="request()->routeIs('settings.*')">
+            Pengaturan
+        </x-sidebar-link>
 
     </nav>
 
