@@ -94,25 +94,48 @@ class PupilPresenceController extends Controller
         return back()->with('success', 'Presensi siswa dihapus.');
     }
 
-    public function pupilDetail(Pupil $pupil)
+    public function pupilDetail(Request $request, Pupil $pupil)
     {
         $pupil->load('schoolClass.grade');
 
-        $presences = $pupil->presences()
-            ->with('classSession.schoolClass.courseType')
-            ->orderByDesc(
-                \App\Models\ClassSession::select('date')
-                    ->whereColumn('id', 'pupil_presences.class_session_id')
-            )
-            ->paginate(20);
+        $from = $request->from ? \Carbon\Carbon::parse($request->from)->startOfDay() : null;
+        $to   = $request->to   ? \Carbon\Carbon::parse($request->to)->endOfDay()     : null;
 
-        $allPresences = $pupil->presences()->get();
+        $baseQuery = $pupil->presences()
+            ->with('classSession.schoolClass.courseType')
+            ->whereHas('classSession', function ($q) use ($from, $to) {
+                if ($from) $q->where('date', '>=', $from);
+                if ($to)   $q->where('date', '<=', $to);
+            });
+
+        $presences = (clone $baseQuery)
+            ->orderByDesc(
+                ClassSession::select('date')->whereColumn('id', 'pupil_presences.class_session_id')
+            )
+            ->paginate(20)
+            ->withQueryString();
+
+        $allPresences = (clone $baseQuery)->get();
         $totalSesi  = $allPresences->count();
         $totalHadir = $allPresences->where('status', 'presence')->count();
         $totalAbsen = $totalSesi - $totalHadir;
         $persen     = $totalSesi > 0 ? round($totalHadir / $totalSesi * 100) : 0;
 
-        return view('pupil-presences.pupil', compact('pupil', 'presences', 'totalSesi', 'totalHadir', 'totalAbsen', 'persen'));
+        // Ringkasan per jenis kelas (hanya yang hadir)
+        $hadirPresences = $allPresences->where('status', 'presence');
+        $byCourseType = $hadirPresences
+            ->groupBy(fn($p) => $p->classSession->schoolClass->courseType?->name ?? 'Lainnya')
+            ->map(fn($group) => $group->count());
+
+        // Tagihan Development Class (rate per murid, 0 = gratis)
+        $devRate    = $pupil->dev_class_rate;
+        $devHadir   = $byCourseType->get('Development Class', 0);
+        $devTagihan = $devHadir * $devRate;
+
+        return view('pupil-presences.pupil', compact(
+            'pupil', 'presences', 'totalSesi', 'totalHadir', 'totalAbsen', 'persen',
+            'byCourseType', 'devHadir', 'devTagihan', 'devRate', 'from', 'to'
+        ));
     }
 
     // ---------------------------------------------------------------

@@ -56,6 +56,16 @@
                         </select>
                     </div>
 
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Rate Development Class <span class="text-gray-400 font-normal">(Rp/sesi, 0 = gratis)</span>
+                        </label>
+                        <input type="number" name="dev_class_rate"
+                            value="{{ old('dev_class_rate', $pupil->dev_class_rate) }}"
+                            min="0" placeholder="0"
+                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                    </div>
+
                     <div class="sm:col-span-2 flex items-center gap-3 pt-1">
                         <input type="hidden" name="active_status" value="0">
                         <input type="checkbox" name="active_status" id="active_status" value="1"

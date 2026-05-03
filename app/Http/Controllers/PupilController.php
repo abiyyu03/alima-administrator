@@ -38,16 +38,18 @@ class PupilController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'code'          => 'required|string|max:30|unique:pupils,code',
-            'name'          => 'required|string|max:150',
-            'dob'           => 'nullable|date',
-            'gender'        => 'nullable|in:male,female',
-            'class_id'      => 'required|exists:classes,id',
-            'active_status' => 'boolean',
+            'code'           => 'required|string|max:30|unique:pupils,code',
+            'name'           => 'required|string|max:150',
+            'dob'            => 'nullable|date',
+            'gender'         => 'nullable|in:male,female',
+            'class_id'       => 'required|exists:classes,id',
+            'active_status'  => 'boolean',
+            'dev_class_rate' => 'nullable|integer|min:0',
         ]);
 
         Pupil::create($request->only('code', 'name', 'dob', 'gender', 'class_id') + [
-            'active_status' => $request->boolean('active_status', true),
+            'active_status'  => $request->boolean('active_status', true),
+            'dev_class_rate' => (int) $request->input('dev_class_rate', 0),
         ]);
 
         return redirect()->route('pupils.index')->with('success', 'Siswa berhasil ditambahkan.');
@@ -63,16 +65,18 @@ class PupilController extends Controller
     public function update(Request $request, Pupil $pupil)
     {
         $request->validate([
-            'code'          => 'required|string|max:30|unique:pupils,code,' . $pupil->id,
-            'name'          => 'required|string|max:150',
-            'dob'           => 'nullable|date',
-            'gender'        => 'nullable|in:male,female',
-            'class_id'      => 'required|exists:classes,id',
-            'active_status' => 'boolean',
+            'code'           => 'required|string|max:30|unique:pupils,code,' . $pupil->id,
+            'name'           => 'required|string|max:150',
+            'dob'            => 'nullable|date',
+            'gender'         => 'nullable|in:male,female',
+            'class_id'       => 'required|exists:classes,id',
+            'active_status'  => 'boolean',
+            'dev_class_rate' => 'nullable|integer|min:0',
         ]);
 
         $pupil->update($request->only('code', 'name', 'dob', 'gender', 'class_id') + [
-            'active_status' => $request->boolean('active_status'),
+            'active_status'  => $request->boolean('active_status'),
+            'dev_class_rate' => (int) $request->input('dev_class_rate', 0),
         ]);
 
         return redirect()->route('pupils.index')->with('success', 'Data siswa berhasil diperbarui.');

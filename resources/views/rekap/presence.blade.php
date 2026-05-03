@@ -53,10 +53,14 @@
 
     {{-- Doc Header --}}
     <div class="text-center mb-6">
-        <h2 class="text-base font-bold uppercase tracking-wide">Absensi Tutor</h2>
+        <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">{{ config('app.name') }}</p>
+        <h2 class="text-lg font-bold uppercase tracking-wide">Rekap Presensi Tutor</h2>
         <p class="text-sm text-gray-500 mt-1">
             Periode {{ $from->translatedFormat('d F Y') }} – {{ $to->translatedFormat('d F Y') }}
         </p>
+        <div class="mt-2 flex justify-center gap-4 text-xs text-gray-400">
+            <span>Dicetak: {{ now()->translatedFormat('d F Y, H:i') }}</span>
+        </div>
     </div>
 
     @if(empty($rows))
@@ -70,30 +74,42 @@
     @else
     <div class="overflow-x-auto">
         <table class="w-full text-xs border-collapse">
-            <thead>
+            <thead style="background-color:#0e7490;color:#ffffff;">
                 <tr>
-                    <th class="border border-gray-400 bg-cyan-700 text-white px-3 py-2"
+                    <th class="border border-gray-400 px-3 py-2"
                         colspan="{{ 3 + count($weekLabels) }}">KELAS REGULER</th>
-                    <th class="border border-gray-400 bg-cyan-700 text-white px-3 py-2"
+                    <th class="border border-gray-400 px-3 py-2"
                         colspan="{{ 3 + count($weekLabels) }}">KELAS PRIVAT</th>
                 </tr>
                 <tr>
-                    <th class="border border-gray-400 bg-cyan-700 text-white px-3 py-2 text-left" rowspan="2">NAMA TUTOR</th>
-                    <th class="border border-gray-400 bg-cyan-700 text-white px-3 py-2" colspan="{{ count($weekLabels) }}">PEKAN</th>
-                    <th class="border border-gray-400 bg-cyan-700 text-white px-3 py-2" rowspan="2">JUMLAH</th>
-                    <th class="border border-gray-400 bg-cyan-700 text-white px-3 py-2" rowspan="2">GAJI</th>
-                    <th class="border border-gray-400 bg-cyan-700 text-white px-3 py-2 text-left" rowspan="2">NAMA TUTOR</th>
-                    <th class="border border-gray-400 bg-cyan-700 text-white px-3 py-2" colspan="{{ count($weekLabels) }}">PEKAN</th>
-                    <th class="border border-gray-400 bg-cyan-700 text-white px-3 py-2" rowspan="2">JUMLAH</th>
-                    <th class="border border-gray-400 bg-cyan-700 text-white px-3 py-2" rowspan="2">GAJI</th>
-                    <th class="border border-gray-400 bg-cyan-700 text-white px-3 py-2" rowspan="2">TOTAL GAJI</th>
+                    <th class="border border-gray-400 px-3 py-2 text-left" rowspan="2">NAMA TUTOR</th>
+                    <th class="border border-gray-400 px-3 py-2" colspan="{{ count($weekLabels) }}">PEKAN</th>
+                    <th class="border border-gray-400 px-3 py-2" rowspan="2">JUMLAH</th>
+                    <th class="border border-gray-400 px-3 py-2" rowspan="2">GAJI</th>
+                    <th class="border border-gray-400 px-3 py-2 text-left" rowspan="2">NAMA TUTOR</th>
+                    <th class="border border-gray-400 px-3 py-2" colspan="{{ count($weekLabels) }}">PEKAN</th>
+                    <th class="border border-gray-400 px-3 py-2" rowspan="2">JUMLAH</th>
+                    <th class="border border-gray-400 px-3 py-2" rowspan="2">GAJI</th>
+                    <th class="border border-gray-400 px-3 py-2" rowspan="2">TOTAL GAJI</th>
                 </tr>
                 <tr>
                     @foreach($weekLabels as $i => $label)
-                        <th class="border border-gray-400 bg-cyan-700 text-white px-2 py-2">{{ $i + 1 }}</th>
+                    @php $w = $weeks[$label]; @endphp
+                        <th class="border border-gray-400 px-2 py-2 text-center leading-tight">
+                            <div>P{{ $i + 1 }}</div>
+                            <div class="font-normal opacity-80" style="font-size:9px">
+                                {{ $w['from']->format('d/m') }}–{{ $w['to']->format('d/m') }}
+                            </div>
+                        </th>
                     @endforeach
                     @foreach($weekLabels as $i => $label)
-                        <th class="border border-gray-400 bg-cyan-700 text-white px-2 py-2">{{ $i + 1 }}</th>
+                    @php $w = $weeks[$label]; @endphp
+                        <th class="border border-gray-400 px-2 py-2 text-center leading-tight">
+                            <div>P{{ $i + 1 }}</div>
+                            <div class="font-normal opacity-80" style="font-size:9px">
+                                {{ $w['from']->format('d/m') }}–{{ $w['to']->format('d/m') }}
+                            </div>
+                        </th>
                     @endforeach
                 </tr>
             </thead>

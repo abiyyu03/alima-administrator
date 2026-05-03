@@ -313,6 +313,14 @@ class TutorPresenceController extends Controller
             $pupilsHadir = $session->pupilPresences()
                 ->where('status', 'presence')
                 ->count();
+
+            if ($pupilsHadir === 0) return 0;
+
+            $minPupils = config('presence.regular_min_pupils');
+            if ($pupilsHadir < $minPupils) {
+                return (float) config('presence.regular_min_incentive');
+            }
+
             return (float) $rate * $pupilsHadir;
         }
 
