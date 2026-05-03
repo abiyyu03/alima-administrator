@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class TutorPresence extends Model
 {
-    protected $fillable = ['class_session_id', 'tutor_id', 'status', 'amount', 'note'];
+    protected $fillable = ['class_session_id', 'tutor_id', 'status', 'amount', 'rate', 'note'];
 
     protected function casts(): array
     {

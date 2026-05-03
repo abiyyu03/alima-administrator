@@ -56,11 +56,14 @@ class PupilPresenceController extends Controller
             'presences.*.note'   => 'nullable|string|max:255',
         ]);
 
-        DB::transaction(function () use ($request, $classSession) {
+        $pupils = Pupil::whereIn('id', array_keys($request->input('presences', [])))->get()->keyBy('id');
+
+        DB::transaction(function () use ($request, $classSession, $pupils) {
             foreach ($request->input('presences') as $pupilId => $data) {
+                $rate = $pupils->get($pupilId)?->dev_class_rate ?? 0;
                 PupilPresence::updateOrCreate(
                     ['class_session_id' => $classSession->id, 'pupil_id' => $pupilId],
-                    ['status' => $data['status'], 'note' => $data['note'] ?? null]
+                    ['status' => $data['status'], 'note' => $data['note'] ?? null, 'dev_class_rate' => $rate]
                 );
             }
 
@@ -127,10 +130,13 @@ class PupilPresenceController extends Controller
             ->groupBy(fn($p) => $p->classSession->schoolClass->courseType?->name ?? 'Lainnya')
             ->map(fn($group) => $group->count());
 
-        // Tagihan Development Class (rate per murid, 0 = gratis)
-        $devRate    = $pupil->dev_class_rate;
-        $devHadir   = $byCourseType->get('Development Class', 0);
-        $devTagihan = $devHadir * $devRate;
+        // Tagihan Development Class — pakai snapshot rate yang tersimpan saat presensi dicatat
+        $devPresences = $hadirPresences->filter(
+            fn($p) => ($p->classSession->schoolClass->courseType?->name ?? '') === 'Development Class'
+        );
+        $devHadir   = $devPresences->count();
+        $devTagihan = $devPresences->sum('dev_class_rate');
+        $devRate    = $pupil->dev_class_rate; // rate saat ini (untuk info)
 
         return view('pupil-presences.pupil', compact(
             'pupil', 'presences', 'totalSesi', 'totalHadir', 'totalAbsen', 'persen',

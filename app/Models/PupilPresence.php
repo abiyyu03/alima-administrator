@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class PupilPresence extends Model
 {
-    protected $fillable = ['class_session_id', 'pupil_id', 'status', 'note'];
+    protected $fillable = ['class_session_id', 'pupil_id', 'status', 'note', 'dev_class_rate'];
 
     public function classSession()
     {

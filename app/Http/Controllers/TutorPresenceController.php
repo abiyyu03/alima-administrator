@@ -81,6 +81,7 @@ class TutorPresenceController extends Controller
         ]);
 
         $presence->load('classSession.schoolClass.courseType');
+        $rate   = self::getRate($presence->classSession, $presence->tutor_id);
         $amount = $validated['status'] === 'presence'
             ? $this->calcAmount($presence->classSession, $presence->tutor_id, $validated['status'])
             : 0;
@@ -94,7 +95,7 @@ class TutorPresenceController extends Controller
             $newPhotoPath = $request->file('photo')->store('session-photos', 'public');
         }
 
-        DB::transaction(function () use ($presence, $validated, $amount, $newPhotoPath) {
+        DB::transaction(function () use ($presence, $validated, $amount, $rate, $newPhotoPath) {
             $sessionUpdate = ['material' => $validated['material'] ?? null];
             if (! empty($validated['session_date'])) {
                 $sessionUpdate['date'] = $validated['session_date'];
@@ -106,6 +107,7 @@ class TutorPresenceController extends Controller
             $presence->update([
                 'status' => $validated['status'],
                 'amount' => $amount,
+                'rate'   => $rate,
                 'note'   => $validated['note'] ?? null,
             ]);
 
@@ -233,16 +235,18 @@ class TutorPresenceController extends Controller
                 ]);
             }
 
+            $session->load('schoolClass.courseType');
+            $rate   = self::getRate($session, $tutor->id);
+            $amount = $this->calcAmount($session, $tutor->id, $validated['status']);
+
             $presence = TutorPresence::create([
                 'class_session_id' => $session->id,
                 'tutor_id'         => $tutor->id,
                 'status'           => $validated['status'],
-                'amount'           => 0,
+                'amount'           => $amount,
+                'rate'             => $rate,
                 'note'             => $validated['note'] ?? null,
             ]);
-
-            $amount = $this->calcAmount($session->load('schoolClass.courseType'), $tutor->id, $validated['status']);
-            $presence->update(['amount' => $amount]);
 
             $this->syncSalary($presence, $amount);
         });
@@ -271,6 +275,7 @@ class TutorPresenceController extends Controller
         ]);
 
         $presence->load('classSession.schoolClass.courseType');
+        $rate   = self::getRate($presence->classSession, $tutor->id);
         $amount = $validated['status'] === 'presence'
             ? $this->calcAmount($presence->classSession, $tutor->id, $validated['status'])
             : 0;
@@ -284,7 +289,7 @@ class TutorPresenceController extends Controller
             $newPhotoPath = $request->file('photo')->store('session-photos', 'public');
         }
 
-        DB::transaction(function () use ($presence, $validated, $amount, $newPhotoPath) {
+        DB::transaction(function () use ($presence, $validated, $amount, $rate, $newPhotoPath) {
             $sessionUpdate = ['material' => $validated['material'] ?? null];
             if ($newPhotoPath !== null) {
                 $sessionUpdate['photo_file'] = $newPhotoPath;
@@ -296,6 +301,7 @@ class TutorPresenceController extends Controller
             $presence->update([
                 'status' => $validated['status'],
                 'amount' => $amount,
+                'rate'   => $rate,
                 'note'   => $validated['note'] ?? null,
             ]);
 
@@ -312,14 +318,18 @@ class TutorPresenceController extends Controller
      * Calculate the tutor amount for a session based on course type.
      * Regular: rate × pupils present. Others: flat rate.
      */
+    public static function getRate(ClassSession $session, int $tutorId): float
+    {
+        return (float) (Tutor::find($tutorId)?->classes()
+            ->where('classes.id', $session->class_id)
+            ->first()?->pivot->amount ?? 0);
+    }
+
     public static function calcAmount(ClassSession $session, int $tutorId, string $status): float
     {
         if ($status !== 'presence') return 0;
 
-        $rate = Tutor::find($tutorId)?->classes()
-            ->where('classes.id', $session->class_id)
-            ->first()?->pivot->amount ?? 0;
-
+        $rate = self::getRate($session, $tutorId);
         $courseTypeName = $session->schoolClass->courseType?->name ?? '';
 
         if ($courseTypeName === 'Regular') {
@@ -334,10 +344,10 @@ class TutorPresenceController extends Controller
                 return (float) config('presence.regular_min_incentive');
             }
 
-            return (float) $rate * $pupilsHadir;
+            return $rate * $pupilsHadir;
         }
 
-        return (float) $rate;
+        return $rate;
     }
 
     private function syncSalary(TutorPresence $presence, float $amount): void
