@@ -125,6 +125,7 @@
 @endif
 
 @push('scripts')
+@if($tutor)
 <script>
 const ctx = document.getElementById('tutorChart')?.getContext('2d');
 if (ctx) {
@@ -172,6 +173,7 @@ if (ctx) {
     });
 }
 </script>
+@endif
 @endpush
 
 @endsection
