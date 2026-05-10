@@ -56,16 +56,13 @@
                     <div class="text-xs font-mono text-gray-400">{{ $pupil->code }}</div>
                 </td>
                 <td class="px-4 py-3 hidden md:table-cell">
-                    <div class="text-sm text-gray-700">{{ $pupil->schoolClass->name }}</div>
-                    <div class="flex items-center gap-1 mt-0.5">
-                        <span class="text-xs text-gray-400">{{ $pupil->schoolClass->grade->name }}</span>
-                        @if($pupil->schoolClass->courseType)
-                        <span class="text-xs px-1.5 py-0.5 rounded-full font-medium
-                            {{ $pupil->schoolClass->courseType->name === 'Regular' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600' }}">
-                            {{ $pupil->schoolClass->courseType->name }}
-                        </span>
-                        @endif
-                    </div>
+                    @forelse($pupil->classes as $class)
+                        <div class="text-sm text-gray-700 leading-snug">{{ $class->name }}
+                            <span class="text-xs text-gray-400">({{ $class->grade->name }})</span>
+                        </div>
+                    @empty
+                        <span class="text-xs text-gray-400">—</span>
+                    @endforelse
                 </td>
                 <td class="px-4 py-3 text-center text-sm text-gray-600">{{ $total > 0 ? $total : '-' }}</td>
                 <td class="px-4 py-3 text-center">

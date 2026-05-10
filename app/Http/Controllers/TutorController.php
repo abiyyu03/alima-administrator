@@ -29,16 +29,18 @@ class TutorController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'          => 'required|string|max:150',
-            'telp'          => 'nullable|string|max:20',
-            'dob'           => 'nullable|date',
-            'domicille'     => 'nullable|string|max:200',
-            'email'         => 'required|email|unique:users,email',
-            'password'      => 'required|string|min:8|confirmed',
-            'class_ids'     => 'nullable|array',
-            'class_ids.*'   => 'exists:classes,id',
-            'amounts'       => 'nullable|array',
-            'amounts.*'     => 'nullable|numeric|min:0',
+            'name'           => 'required|string|max:150',
+            'telp'           => 'nullable|string|max:20',
+            'dob'            => 'nullable|date',
+            'domicille'      => 'nullable|string|max:200',
+            'email'          => 'required|email|unique:users,email',
+            'password'       => 'required|string|min:8|confirmed',
+            'class_ids'      => 'nullable|array',
+            'class_ids.*'    => 'exists:classes,id',
+            'amounts'        => 'nullable|array',
+            'amounts.*'      => 'nullable|numeric|min:0',
+            'extra_fees'     => 'nullable|array',
+            'extra_fees.*'   => 'nullable|integer|min:0',
         ]);
 
         DB::transaction(function () use ($request) {
@@ -65,23 +67,25 @@ class TutorController extends Controller
         $tutor->load('classes.grade', 'classes.courseType');
         $classes = SchoolClass::with(['grade', 'courseType'])->orderBy('name')->get();
 
-        // Map class_id => amount for pre-filling form
-        $assignedAmounts = $tutor->classes->pluck('pivot.amount', 'id');
+        $assignedAmounts   = $tutor->classes->pluck('pivot.amount', 'id');
+        $assignedExtraFees = $tutor->classes->pluck('pivot.extra_fee', 'id');
 
-        return view('tutors.edit', compact('tutor', 'classes', 'assignedAmounts'));
+        return view('tutors.edit', compact('tutor', 'classes', 'assignedAmounts', 'assignedExtraFees'));
     }
 
     public function update(Request $request, Tutor $tutor)
     {
         $request->validate([
-            'name'          => 'required|string|max:150',
-            'telp'          => 'nullable|string|max:20',
-            'dob'           => 'nullable|date',
-            'domicille'     => 'nullable|string|max:200',
-            'class_ids'     => 'nullable|array',
-            'class_ids.*'   => 'exists:classes,id',
-            'amounts'       => 'nullable|array',
-            'amounts.*'     => 'nullable|numeric|min:0',
+            'name'           => 'required|string|max:150',
+            'telp'           => 'nullable|string|max:20',
+            'dob'            => 'nullable|date',
+            'domicille'      => 'nullable|string|max:200',
+            'class_ids'      => 'nullable|array',
+            'class_ids.*'    => 'exists:classes,id',
+            'amounts'        => 'nullable|array',
+            'amounts.*'      => 'nullable|numeric|min:0',
+            'extra_fees'     => 'nullable|array',
+            'extra_fees.*'   => 'nullable|integer|min:0',
         ]);
 
         $tutor->update($request->only('name', 'telp', 'dob', 'domicille'));
@@ -107,12 +111,15 @@ class TutorController extends Controller
 
     private function syncClassesWithAmounts(Tutor $tutor, Request $request): void
     {
-        $classIds = $request->input('class_ids', []);
-        $amounts  = $request->input('amounts', []);
+        $classIds  = $request->input('class_ids', []);
+        $amounts   = $request->input('amounts', []);
+        $extraFees = $request->input('extra_fees', []);
 
-        // Build sync payload: [class_id => ['amount' => X]]
-        $syncData = collect($classIds)->mapWithKeys(function ($classId) use ($amounts) {
-            return [$classId => ['amount' => (float) ($amounts[$classId] ?? 0)]];
+        $syncData = collect($classIds)->mapWithKeys(function ($classId) use ($amounts, $extraFees) {
+            return [$classId => [
+                'amount'    => (float) ($amounts[$classId] ?? 0),
+                'extra_fee' => (int)   ($extraFees[$classId] ?? 0),
+            ]];
         })->toArray();
 
         $tutor->classes()->sync($syncData);

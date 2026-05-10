@@ -32,7 +32,7 @@ class SchoolClass extends Model
 
     public function pupils()
     {
-        return $this->hasMany(Pupil::class, 'class_id');
+        return $this->belongsToMany(Pupil::class, 'class_pupil', 'class_id', 'pupil_id');
     }
 
     public function sessions()

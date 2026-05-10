@@ -318,18 +318,36 @@ class TutorPresenceController extends Controller
      * Calculate the tutor amount for a session based on course type.
      * Regular: rate × pupils present. Others: flat rate.
      */
+    public static function getPivot(ClassSession $session, int $tutorId): ?object
+    {
+        return Tutor::find($tutorId)?->classes()
+            ->where('classes.id', $session->class_id)
+            ->first()?->pivot;
+    }
+
     public static function getRate(ClassSession $session, int $tutorId): float
     {
-        return (float) (Tutor::find($tutorId)?->classes()
-            ->where('classes.id', $session->class_id)
-            ->first()?->pivot->amount ?? 0);
+        $pivot          = self::getPivot($session, $tutorId);
+        $courseTypeName = $session->schoolClass->courseType?->name ?? '';
+
+        // Use pivot amount if explicitly set, otherwise fall back to config default
+        $base = (float) ($pivot?->amount ?? 0);
+        if ($base === 0.0) {
+            $base = strtolower($courseTypeName) === 'private'
+                ? (float) config('presence.tutor_rate_private')
+                : (float) config('presence.tutor_rate_regular');
+        }
+
+        $extra = (float) ($pivot?->extra_fee ?? 0);
+
+        return $base + $extra;
     }
 
     public static function calcAmount(ClassSession $session, int $tutorId, string $status): float
     {
         if ($status !== 'presence') return 0;
 
-        $rate = self::getRate($session, $tutorId);
+        $rate           = self::getRate($session, $tutorId);
         $courseTypeName = $session->schoolClass->courseType?->name ?? '';
 
         if ($courseTypeName === 'Regular') {
@@ -344,7 +362,12 @@ class TutorPresenceController extends Controller
                 return (float) config('presence.regular_min_incentive');
             }
 
-            return $rate * $pupilsHadir;
+            // For Regular, extra_fee stays flat (not multiplied by pupils)
+            $pivot = self::getPivot($session, $tutorId);
+            $extra = (float) ($pivot?->extra_fee ?? 0);
+            $base  = $rate - $extra;
+
+            return ($base * $pupilsHadir) + $extra;
         }
 
         return $rate;

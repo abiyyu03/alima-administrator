@@ -80,8 +80,11 @@
                     <p class="font-medium text-gray-800">{{ $pupil->name }}</p>
                 </td>
                 <td class="px-4 py-3 hidden md:table-cell">
-                    <p class="text-sm text-gray-700">{{ $pupil->schoolClass->name }}</p>
-                    <p class="text-xs text-gray-400">{{ $pupil->schoolClass->grade->name }}</p>
+                    @forelse($pupil->classes as $class)
+                        <div class="text-sm text-gray-700 leading-snug">{{ $class->name }}</div>
+                    @empty
+                        <span class="text-xs text-gray-400">—</span>
+                    @endforelse
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell">
                     {{ $pupil->dob ? $pupil->dob->translatedFormat('d M Y') : '-' }}

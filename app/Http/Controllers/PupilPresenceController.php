@@ -16,12 +16,12 @@ class PupilPresenceController extends Controller
         $search  = $request->search;
         $classId = $request->class_id;
 
-        $pupils = Pupil::with(['schoolClass.grade', 'schoolClass.courseType'])
+        $pupils = Pupil::with(['classes.grade', 'classes.courseType'])
             ->withCount([
                 'presences as total_sesi',
                 'presences as total_hadir' => fn($q) => $q->where('status', 'presence'),
             ])
-            ->when($classId, fn($q) => $q->where('class_id', $classId))
+            ->when($classId, fn($q) => $q->whereHas('classes', fn($q2) => $q2->where('classes.id', $classId)))
             ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
             ->orderBy('name')
             ->paginate(20)
@@ -37,7 +37,7 @@ class PupilPresenceController extends Controller
         $classSession->load(['schoolClass.grade', 'schoolClass.courseType', 'tutorPresences.tutor']);
 
         // All pupils enrolled in this class
-        $pupils = Pupil::where('class_id', $classSession->class_id)
+        $pupils = Pupil::whereHas('classes', fn($q) => $q->where('classes.id', $classSession->class_id))
             ->where('active_status', true)
             ->orderBy('name')
             ->get();
@@ -99,7 +99,7 @@ class PupilPresenceController extends Controller
 
     public function pupilDetail(Request $request, Pupil $pupil)
     {
-        $pupil->load('schoolClass.grade');
+        $pupil->load('classes.grade');
 
         $from = $request->from ? \Carbon\Carbon::parse($request->from)->startOfDay() : null;
         $to   = $request->to   ? \Carbon\Carbon::parse($request->to)->endOfDay()     : null;

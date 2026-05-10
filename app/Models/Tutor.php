@@ -18,7 +18,7 @@ class Tutor extends Model
     public function classes()
     {
         return $this->belongsToMany(SchoolClass::class, 'tutor_classes', 'tutor_id', 'class_id')
-                    ->withPivot('amount')
+                    ->withPivot('amount', 'extra_fee')
                     ->withTimestamps();
     }
 

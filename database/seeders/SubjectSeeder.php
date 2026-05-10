@@ -19,13 +19,11 @@ class SubjectSeeder extends Seeder
                 'Matematika',
                 'Bahasa Indonesia',
                 'Bahasa Inggris',
-                'IPA',
                 'BTQ (Baca Tulis Al-Quran)',
                 'Bahasa Arab',
             ],
             'SMP' => [
                 'Matematika',
-                'Bahasa Indonesia',
                 'Bahasa Inggris',
                 'BTQ (Baca Tulis Al-Quran)',
                 'Coding',

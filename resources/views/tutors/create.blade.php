@@ -93,13 +93,26 @@
                                             <p class="text-xs text-gray-400">{{ $class->grade->name }}</p>
                                         </div>
                                     </label>
-                                    <div x-show="checked" x-transition class="mt-2.5 pl-6">
-                                        <div class="relative">
-                                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">Rp</span>
-                                            <input type="number" name="amounts[{{ $class->id }}]"
-                                                value="{{ old('amounts.' . $class->id, 0) }}"
-                                                min="0" step="500" placeholder="0"
-                                                class="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                                    <div x-show="checked" x-transition class="mt-2.5 pl-6 space-y-2">
+                                        <div>
+                                            <p class="text-xs text-gray-400 mb-1">Gaji per sesi (0 = default)</p>
+                                            <div class="relative">
+                                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">Rp</span>
+                                                <input type="number" name="amounts[{{ $class->id }}]"
+                                                    value="{{ old('amounts.' . $class->id, 0) }}"
+                                                    min="0" step="500" placeholder="0"
+                                                    class="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-gray-400 mb-1">Biaya tambahan (jarak, dll)</p>
+                                            <div class="relative">
+                                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">Rp</span>
+                                                <input type="number" name="extra_fees[{{ $class->id }}]"
+                                                    value="{{ old('extra_fees.' . $class->id, 0) }}"
+                                                    min="0" step="500" placeholder="0"
+                                                    class="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

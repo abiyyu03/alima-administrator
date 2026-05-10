@@ -21,18 +21,34 @@
                     <x-input label="Kode Siswa" name="code" :value="old('code')"
                         placeholder="Mis. SWA-001" :error="$errors->first('code')" />
 
-                    <div class="sm:col-span-1">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Kelas <span class="text-red-500">*</span></label>
-                        <select name="class_id"
-                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-white @error('class_id') border-red-400 @enderror">
-                            <option value="">-- Pilih Kelas --</option>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Kelas <span class="text-red-500">*</span></label>
+                        <div class="space-y-2 max-h-56 overflow-y-auto border border-gray-200 rounded-lg p-3">
                             @foreach($classes as $class)
-                                <option value="{{ $class->id }}" {{ old('class_id') == $class->id ? 'selected' : '' }}>
-                                    {{ $class->name }} — {{ $class->grade->name }} ({{ $class->courseType->name }})
-                                </option>
+                            @php $isPrivate = strtolower($class->courseType->name) === 'private'; @endphp
+                            <div x-data="{ checked: {{ in_array($class->id, old('class_ids', [])) ? 'true' : 'false' }} }">
+                                <label class="flex items-start gap-2 cursor-pointer">
+                                    <input type="checkbox" name="class_ids[]" value="{{ $class->id }}"
+                                        x-model="checked"
+                                        class="mt-0.5 rounded border-gray-300 text-green-600 focus:ring-green-400">
+                                    <span class="text-sm text-gray-700 leading-snug">
+                                        {{ $class->name }}
+                                        <span class="text-xs text-gray-400 block">{{ $class->grade->name }} · {{ $class->courseType->name }}</span>
+                                    </span>
+                                </label>
+                                @if($isPrivate)
+                                <div x-show="checked" x-transition class="mt-1.5 ml-6">
+                                    <label class="text-xs text-gray-500">Rate per sesi (Rp)</label>
+                                    <input type="number" name="class_rates[{{ $class->id }}]"
+                                        value="{{ old('class_rates.' . $class->id, 0) }}"
+                                        min="0" placeholder="0"
+                                        class="mt-0.5 w-40 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                                </div>
+                                @endif
+                            </div>
                             @endforeach
-                        </select>
-                        @error('class_id')
+                        </div>
+                        @error('class_ids')
                             <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
                         @enderror
                     </div>
