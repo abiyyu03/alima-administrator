@@ -100,10 +100,23 @@
                             </span>
                         </div>
                     </div>
+                    @php
+                        $pivotAmt     = (int) $class->pivot->amount;
+                        $effectiveRate = $pivotAmt > 0 ? $pivotAmt
+                            : (strtolower($class->courseType->name) === 'private'
+                                ? (int) config('presence.tutor_rate_private')
+                                : (int) config('presence.tutor_rate_regular'));
+                        $isRegular    = strtolower($class->courseType->name) === 'regular';
+                        $minPupils    = (int) config('presence.regular_min_pupils');
+                        $minIncentive = (int) config('presence.regular_min_incentive');
+                        $extraFee     = (int) ($class->pivot->extra_fee ?? 0);
+                    @endphp
                     <div class="text-right shrink-0">
-                        <p class="text-xs text-gray-400">Rate</p>
-                        <p class="text-sm font-bold text-green-700">Rp
-                            {{ number_format($class->pivot->amount, 0, ',', '.') }}</p>
+                        <p class="text-xs text-gray-400">{{ $isRegular ? 'Rate / siswa' : 'Rate / sesi' }}</p>
+                        <p class="text-sm font-bold text-green-700">Rp {{ number_format($effectiveRate, 0, ',', '.') }}</p>
+                        @if($isRegular)
+                            <p class="text-xs text-gray-400 mt-0.5">&lt; {{ $minPupils }} siswa → Rp {{ number_format($minIncentive + $extraFee, 0, ',', '.') }}</p>
+                        @endif
                     </div>
                 </div>
 
@@ -244,22 +257,46 @@
 
                             {{-- Siswa Hadir --}}
                             @if ($class->pupils->isNotEmpty())
-                                <div>
-                                    <div class="flex items-center justify-between mb-1.5">
-                                        <label class="text-xs font-medium text-gray-600">
-                                            Siswa Hadir
-                                            <span class="text-gray-400 font-normal">(Ctrl/Cmd+klik untuk multi)</span>
-                                        </label>
-                                    </div>
+                                <div x-data="{
+                                    count: 0,
+                                    isRegular: {{ $isRegular ? 'true' : 'false' }},
+                                    minPupils: {{ $minPupils }},
+                                    minIncentive: {{ $minIncentive + $extraFee }},
+                                    ratePerPupil: {{ $effectiveRate }},
+                                    extraFee: {{ $extraFee }},
+                                    get estimasi() {
+                                        if (!this.isRegular) return null;
+                                        if (this.count === 0) return null;
+                                        if (this.count < this.minPupils) return this.minIncentive;
+                                        return (this.ratePerPupil * this.count) + this.extraFee;
+                                    },
+                                    get label() {
+                                        if (this.estimasi === null) return '';
+                                        if (this.count < this.minPupils) return 'Insentif minimum';
+                                        return 'Estimasi gaji';
+                                    }
+                                }">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1.5">Siswa Hadir</label>
                                     <select name="pupil_ids[]" multiple
                                         id="pupil-select-{{ $class->id }}"
-                                        class="pupil-multiselect w-full text-sm">
+                                        class="pupil-multiselect w-full text-sm"
+                                        @change="count = Array.from($event.target.selectedOptions).filter(o => o.value).length">
                                         @foreach ($class->pupils as $pupil)
                                             <option value="{{ $pupil->id }}">
                                                 {{ $pupil->name }} ({{ $pupil->code }})
                                             </option>
                                         @endforeach
                                     </select>
+                                    @if($isRegular)
+                                    <p class="text-xs mt-1.5" x-show="estimasi !== null"
+                                        :class="count < minPupils ? 'text-amber-500' : 'text-green-600'">
+                                        <span x-text="label"></span>:
+                                        Rp <span x-text="estimasi.toLocaleString('id-ID')"></span>
+                                        <template x-if="count < minPupils && count > 0">
+                                            <span class="text-gray-400"> (murid &lt; {{ $minPupils }})</span>
+                                        </template>
+                                    </p>
+                                    @endif
                                 </div>
                             @endif
 
@@ -511,6 +548,10 @@
                         placeholder: '— Pilih siswa yang hadir —',
                         allowClear: true,
                         width: '100%',
+                    });
+                    // Dispatch native change so Alpine x-data can react
+                    $(this).on('change', function () {
+                        this.dispatchEvent(new Event('change', { bubbles: true }));
                     });
                 }
             });

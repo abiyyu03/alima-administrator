@@ -73,18 +73,17 @@ class TutorPresenceController extends Controller
     public function update(Request $request, TutorPresence $presence)
     {
         $validated = $request->validate([
-            'status'       => 'required|in:presence,absent,sick,permission',
             'note'         => 'nullable|string|max:500',
             'material'     => 'nullable|string|max:500',
             'session_date' => 'nullable|date',
             'photo'        => 'nullable|image|max:5120',
         ]);
 
+        $validated['status'] = 'presence';
+
         $presence->load('classSession.schoolClass.courseType');
         $rate   = self::getRate($presence->classSession, $presence->tutor_id);
-        $amount = $validated['status'] === 'presence'
-            ? $this->calcAmount($presence->classSession, $presence->tutor_id, $validated['status'])
-            : 0;
+        $amount = $this->calcAmount($presence->classSession, $presence->tutor_id, 'presence');
 
         $newPhotoPath = null;
         if ($request->hasFile('photo')) {
@@ -350,22 +349,24 @@ class TutorPresenceController extends Controller
         $rate           = self::getRate($session, $tutorId);
         $courseTypeName = $session->schoolClass->courseType?->name ?? '';
 
-        if ($courseTypeName === 'Regular') {
+        if (strtolower($courseTypeName) === 'regular') {
             $pupilsHadir = $session->pupilPresences()
                 ->where('status', 'presence')
                 ->count();
 
-            if ($pupilsHadir === 0) return 0;
-
-            $minPupils = config('presence.regular_min_pupils');
-            if ($pupilsHadir < $minPupils) {
-                return (float) config('presence.regular_min_incentive');
-            }
-
-            // For Regular, extra_fee stays flat (not multiplied by pupils)
             $pivot = self::getPivot($session, $tutorId);
             $extra = (float) ($pivot?->extra_fee ?? 0);
-            $base  = $rate - $extra;
+
+            $minPupils = (int) config('presence.regular_min_pupils');
+
+            if ($pupilsHadir === 0) {
+                return (float) config('presence.regular_min_incentive') + $extra;
+            }
+            if ($pupilsHadir < $minPupils) {
+                return (float) config('presence.regular_min_incentive') + $extra;
+            }
+
+            $base = $rate - $extra;
 
             return ($base * $pupilsHadir) + $extra;
         }

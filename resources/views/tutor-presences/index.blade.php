@@ -172,8 +172,10 @@
                         <tbody class="divide-y divide-gray-100">
                             @foreach ($sessions as $session)
                                 @php
-                                    $isRegular  = $session->schoolClass->courseType?->name === 'Regular';
-                                    $pupilHadir = $session->pupilPresences->where('status', 'presence')->count();
+                                    $isRegular    = strtolower($session->schoolClass->courseType?->name ?? '') === 'regular';
+                                    $pupilHadir   = $session->pupilPresences->where('status', 'presence')->count();
+                                    $minPupils    = (int) config('presence.regular_min_pupils');
+                                    $isBelowMin   = $isRegular && $pupilHadir < $minPupils;
                                 @endphp
                                 @if ($session->tutorPresences->isEmpty())
                                     <tr class="hover:bg-gray-50"
@@ -243,8 +245,14 @@
                                             </td>
                                             {{-- Pendapatan --}}
                                             <td class="px-4 py-3 text-right font-semibold whitespace-nowrap {{ $p->earned > 0 ? 'text-green-700' : 'text-gray-400' }}">
-                                                @if ($isRegular && $p->status === 'presence')
-                                                    <span class="text-xs text-gray-400 block">{{ $pupilHadir }} × rate</span>
+                                                @if ($p->status === 'presence' && $isRegular)
+                                                    @if ($pupilHadir === 0)
+                                                        <span class="text-xs text-amber-500 block">0 siswa → insentif min</span>
+                                                    @elseif ($isBelowMin)
+                                                        <span class="text-xs text-amber-500 block">{{ $pupilHadir }} siswa &lt; min {{ $minPupils }}</span>
+                                                    @else
+                                                        <span class="text-xs text-gray-400 block">{{ $pupilHadir }} siswa</span>
+                                                    @endif
                                                 @endif
                                                 {{ $p->earned > 0 ? 'Rp ' . number_format($p->earned, 0, ',', '.') : '—' }}
                                             </td>
@@ -320,18 +328,6 @@
                         <label class="block text-xs font-medium text-gray-600 mb-1">Tanggal Sesi</label>
                         <input type="date" name="session_date" x-model="current.sessionDate"
                             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
-                    </div>
-
-                    {{-- Status --}}
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Status Kehadiran</label>
-                        <select name="status" x-model="current.status"
-                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-white">
-                            <option value="presence">Hadir</option>
-                            <option value="sick">Sakit</option>
-                            <option value="permission">Izin</option>
-                            <option value="absent">Alpha</option>
-                        </select>
                     </div>
 
                     {{-- Materi --}}
