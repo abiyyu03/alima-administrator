@@ -20,7 +20,6 @@ class SubjectSeeder extends Seeder
                 'Bahasa Indonesia',
                 'Bahasa Inggris',
                 'IPA',
-                'IPS',
                 'BTQ (Baca Tulis Al-Quran)',
                 'Bahasa Arab',
             ],

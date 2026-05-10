@@ -23,15 +23,5 @@ class UserSeeder extends Seeder
                 'role_id'  => $superadminRole?->id,
             ]
         );
-
-        // Contoh akun tutor
-        User::firstOrCreate(
-            ['email' => 'tutor@alima.id'],
-            [
-                'name'     => 'Tutor Demo',
-                'password' => Hash::make('password'),
-                'role_id'  => $tutorRole?->id,
-            ]
-        );
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class SettingsController extends Controller
 {
@@ -24,7 +25,7 @@ class SettingsController extends Controller
         $request->validate([
             'password' => 'required|string|min:8|confirmed',
         ]);
-        $user = Auth::user(); $user->password = $request->password; $user->save();
+        $user = Auth::user(); $user->password = Hash::make($request->password); $user->save();
         return back()->with('success', 'Password berhasil diubah.');
     }
 }
