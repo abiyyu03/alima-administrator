@@ -432,17 +432,6 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Status Kehadiran</label>
-                        <select name="status" x-model="current.status"
-                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-white">
-                            <option value="presence">Hadir</option>
-                            <option value="sick">Sakit</option>
-                            <option value="permission">Izin</option>
-                            <option value="absent">Alpha</option>
-                        </select>
-                    </div>
-
-                    <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">
                             Materi <span class="text-gray-400 font-normal">(opsional)</span>
                         </label>

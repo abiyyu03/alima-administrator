@@ -267,7 +267,6 @@ class TutorPresenceController extends Controller
         if (! $tutor || $presence->tutor_id !== $tutor->id) abort(403);
 
         $validated = $request->validate([
-            'status'       => 'required|in:presence,absent,sick,permission',
             'note'         => 'nullable|string|max:500',
             'material'     => 'nullable|string|max:500',
             'week'         => 'nullable|date',
@@ -275,11 +274,11 @@ class TutorPresenceController extends Controller
             'photo'        => 'nullable|image|max:5120',
         ]);
 
+        $validated['status'] = 'presence';
+
         $presence->load('classSession.schoolClass.courseType');
         $rate   = self::getRate($presence->classSession, $tutor->id);
-        $amount = $validated['status'] === 'presence'
-            ? $this->calcAmount($presence->classSession, $tutor->id, $validated['status'])
-            : 0;
+        $amount = $this->calcAmount($presence->classSession, $tutor->id, 'presence');
 
         $newPhotoPath = null;
         if ($request->hasFile('photo')) {
