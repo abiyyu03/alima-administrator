@@ -293,7 +293,16 @@
                                         <img :src="preview" class="max-h-32 max-w-xl rounded-lg object-cover">
                                     </template>
                                     <input type="file" name="photo" accept="image/*" class="hidden"
-                                        @change="preview = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null">
+                                        @change="
+                                            const f = $event.target.files[0];
+                                            if (f && f.size > 5 * 1024 * 1024) {
+                                                alert('Ukuran file melebihi batas maksimal 5 MB.');
+                                                $event.target.value = '';
+                                                preview = null;
+                                            } else {
+                                                preview = f ? URL.createObjectURL(f) : null;
+                                            }
+                                        ">
                                 </label>
                                 <template x-if="preview">
                                     <button type="button"
@@ -467,7 +476,16 @@
                             <span class="text-xs text-gray-400"
                                 x-text="preview ? 'Foto dipilih' : (current.photoUrl ? 'Ada foto sebelumnya' : 'Belum ada foto')"></span>
                             <input type="file" name="photo" accept="image/*" class="hidden"
-                                @change="preview = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null">
+                                @change="
+                                    const f = $event.target.files[0];
+                                    if (f && f.size > 5 * 1024 * 1024) {
+                                        alert('Ukuran file melebihi batas maksimal 5 MB.');
+                                        $event.target.value = '';
+                                        preview = null;
+                                    } else {
+                                        preview = f ? URL.createObjectURL(f) : null;
+                                    }
+                                ">
                         </label>
                     </div>
 
