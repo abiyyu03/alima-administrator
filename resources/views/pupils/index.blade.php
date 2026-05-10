@@ -109,11 +109,11 @@
                     <div class="flex items-center justify-end gap-2">
                         <x-btn href="{{ route('pupils.presences', $pupil) }}" size="sm" variant="outline">Presensi</x-btn>
                         <x-btn href="{{ route('pupils.edit', $pupil) }}" size="sm" variant="outline">Edit</x-btn>
-                        <form method="POST" action="{{ route('pupils.destroy', $pupil) }}"
-                            onsubmit="return confirm('Hapus siswa {{ $pupil->name }}?')">
+                        <form method="POST" action="{{ route('pupils.destroy', $pupil) }}" id="del-pupil-{{ $pupil->id }}">
                             @csrf @method('DELETE')
-                            <x-btn type="submit" size="sm" variant="danger">Hapus</x-btn>
                         </form>
+                        <x-btn type="button" size="sm" variant="danger" x-data
+                            @click="$store.deleteConfirm.show('Hapus siswa {{ addslashes($pupil->name) }}? Tindakan ini tidak dapat dibatalkan.', 'del-pupil-{{ $pupil->id }}')">Hapus</x-btn>
                     </div>
                 </td>
             </tr>

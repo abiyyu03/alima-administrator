@@ -2,7 +2,7 @@
 
 @section('title', 'Presensi — ' . $pupil->name)
 @section('header', 'Detail Presensi Siswa')
-@section('subheader', $pupil->name . ' · ' . $pupil->schoolClass->name)
+@section('subheader', $pupil->name . ' · ' . $pupil->classes->pluck('name')->join(', '))
 
 @section('breadcrumb')
     <a href="{{ route('pupil-presences.index') }}" class="hover:text-green-600">Presensi Siswa</a>
@@ -102,11 +102,11 @@
             </div>
             <div class="flex justify-between">
                 <span class="text-gray-400">Kelas</span>
-                <span class="font-medium text-gray-800">{{ $pupil->schoolClass->name }}</span>
+                <span class="font-medium text-gray-800">{{ $pupil->classes->pluck('name')->join(', ') }}</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-gray-400">Grade</span>
-                <span class="text-gray-700">{{ $pupil->schoolClass->grade->name }}</span>
+                <span class="text-gray-700">{{ $pupil->classes->pluck('grade.name')->filter()->unique()->join(', ') }}</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-gray-400">Status</span>

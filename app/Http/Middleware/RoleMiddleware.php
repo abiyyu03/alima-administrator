@@ -14,6 +14,7 @@ class RoleMiddleware
     private const TUTOR_ALLOWED = [
         'my-presences',
         'dashboard',
+        'settings',
         'logout',
     ];
 

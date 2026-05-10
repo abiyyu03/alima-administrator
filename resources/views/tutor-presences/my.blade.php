@@ -1,5 +1,35 @@
 @extends('layouts.app')
 
+@push('styles')
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <style>
+        .select2-container--default .select2-selection--multiple {
+            border-radius: 0.5rem;
+            border-color: #d1d5db;
+            min-height: 38px;
+            padding: 2px 6px;
+        }
+        .select2-container--default.select2-container--focus .select2-selection--multiple {
+            border-color: #4ade80;
+            outline: none;
+            box-shadow: 0 0 0 2px rgb(74 222 128 / 0.4);
+        }
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background-color: #dcfce7;
+            border-color: #86efac;
+            color: #166534;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            padding: 1px 6px;
+        }
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+            color: #16a34a;
+        }
+        .select2-dropdown { border-color: #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; }
+        .select2-search--dropdown .select2-search__field { border-radius: 0.375rem; border-color: #d1d5db; }
+    </style>
+@endpush
+
 @section('title', 'Presensi Saya')
 @section('header', 'Presensi Saya')
 @section('subheader', 'Catat dan pantau kehadiranmu per sesi kelas')
@@ -212,17 +242,6 @@
                                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                             </div>
 
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Status Kehadiran Tutor</label>
-                                <select name="status"
-                                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-white">
-                                    <option value="presence">Hadir</option>
-                                    <option value="sick">Sakit</option>
-                                    <option value="permission">Izin</option>
-                                    <option value="absent">Alpha</option>
-                                </select>
-                            </div>
-
                             {{-- Siswa Hadir --}}
                             @if ($class->pupils->isNotEmpty())
                                 <div>
@@ -232,16 +251,15 @@
                                             <span class="text-gray-400 font-normal">(Ctrl/Cmd+klik untuk multi)</span>
                                         </label>
                                     </div>
-                                    <select name="pupil_ids[]" multiple size="{{ min($class->pupils->count(), 6) }}"
-                                        class="w-full rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-white">
+                                    <select name="pupil_ids[]" multiple
+                                        id="pupil-select-{{ $class->id }}"
+                                        class="pupil-multiselect w-full text-sm">
                                         @foreach ($class->pupils as $pupil)
-                                            <option value="{{ $pupil->id }}" selected class="px-3 py-2">
+                                            <option value="{{ $pupil->id }}">
                                                 {{ $pupil->name }} ({{ $pupil->code }})
                                             </option>
                                         @endforeach
                                     </select>
-                                    <p class="text-xs text-gray-400 mt-1">Default semua terpilih. Klik untuk deselect yang
-                                        tidak hadir.</p>
                                 </div>
                             @endif
 
@@ -476,6 +494,22 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        function initPupilSelects() {
+            $('.pupil-multiselect').each(function () {
+                if (!$(this).hasClass('select2-hidden-accessible')) {
+                    $(this).select2({
+                        placeholder: '— Pilih siswa yang hadir —',
+                        allowClear: true,
+                        width: '100%',
+                    });
+                }
+            });
+        }
+        document.addEventListener('DOMContentLoaded', initPupilSelects);
+    </script>
     <script>
         function presenceCard(classId) {
             return {

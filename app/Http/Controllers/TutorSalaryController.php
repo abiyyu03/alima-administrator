@@ -17,7 +17,13 @@ class TutorSalaryController extends Controller
         ->orderBy('name')
         ->get()
         ->map(function ($tutor) {
-            $tutor->total_rate = $tutor->classes->sum('pivot.amount');
+            $tutor->total_rate = $tutor->classes->sum(function ($class) {
+                $amount = (int) $class->pivot->amount;
+                if ($amount > 0) return $amount;
+                return strtolower($class->courseType?->name ?? '') === 'private'
+                    ? (int) config('presence.tutor_rate_private')
+                    : (int) config('presence.tutor_rate_regular');
+            });
 
             return $tutor;
         });

@@ -30,11 +30,11 @@
                 <td class="px-4 py-3 text-right">
                     <div class="flex items-center justify-end gap-2">
                         <x-btn size="sm" variant="outline" x-data @click="$dispatch('open-edit-grade', {{ $grade->toJson() }})">Edit</x-btn>
-                        <form method="POST" action="{{ route('grades.destroy', $grade) }}"
-                            onsubmit="return confirm('Hapus tingkatan {{ $grade->name }}?')">
+                        <form method="POST" action="{{ route('grades.destroy', $grade) }}" id="del-grade-{{ $grade->id }}">
                             @csrf @method('DELETE')
-                            <x-btn type="submit" size="sm" variant="danger">Hapus</x-btn>
                         </form>
+                        <x-btn type="button" size="sm" variant="danger" x-data
+                            @click="$store.deleteConfirm.show('Hapus tingkatan {{ addslashes($grade->name) }}? Tindakan ini tidak dapat dibatalkan.', 'del-grade-{{ $grade->id }}')">Hapus</x-btn>
                     </div>
                 </td>
             </tr>

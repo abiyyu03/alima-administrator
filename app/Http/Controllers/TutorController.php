@@ -115,10 +115,24 @@ class TutorController extends Controller
         $amounts   = $request->input('amounts', []);
         $extraFees = $request->input('extra_fees', []);
 
-        $syncData = collect($classIds)->mapWithKeys(function ($classId) use ($amounts, $extraFees) {
+        $classes = \App\Models\SchoolClass::with('courseType')
+            ->whereIn('id', $classIds)
+            ->get()
+            ->keyBy('id');
+
+        $syncData = collect($classIds)->mapWithKeys(function ($classId) use ($amounts, $extraFees, $classes) {
+            $inputAmount = (float) ($amounts[$classId] ?? 0);
+
+            if ($inputAmount === 0.0) {
+                $typeName    = strtolower($classes->get($classId)?->courseType?->name ?? '');
+                $inputAmount = $typeName === 'private'
+                    ? (float) config('presence.tutor_rate_private')
+                    : (float) config('presence.tutor_rate_regular');
+            }
+
             return [$classId => [
-                'amount'    => (float) ($amounts[$classId] ?? 0),
-                'extra_fee' => (int)   ($extraFees[$classId] ?? 0),
+                'amount'    => $inputAmount,
+                'extra_fee' => (int) ($extraFees[$classId] ?? 0),
             ]];
         })->toArray();
 

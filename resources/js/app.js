@@ -1,6 +1,25 @@
 import './bootstrap';
 import Alpine from 'alpinejs';
 window.Alpine = Alpine;
+
+Alpine.store('deleteConfirm', {
+    open: false,
+    message: '',
+    formId: '',
+    show(message, formId) {
+        this.message = message;
+        this.formId  = formId;
+        this.open    = true;
+    },
+    confirm() {
+        document.getElementById(this.formId)?.submit();
+        this.open = false;
+    },
+    cancel() {
+        this.open = false;
+    },
+});
+
 Alpine.start();
 
 // Sidebar toggle — drawer on mobile, collapse on desktop

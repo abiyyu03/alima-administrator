@@ -196,13 +196,14 @@ class TutorPresenceController extends Controller
             'class_id'    => 'required|exists:classes,id',
             'date'        => 'required|date',
             'material'    => 'nullable|string|max:500',
-            'status'      => 'required|in:presence,absent,sick,permission',
             'note'        => 'nullable|string|max:500',
             'week'        => 'nullable|date',
             'pupil_ids'   => 'nullable|array',
             'pupil_ids.*' => 'exists:pupils,id',
             'photo'       => 'nullable|image|max:5120',
         ]);
+
+        $validated['status'] = 'presence';
 
         $ownsClass = $tutor->classes()->where('classes.id', $validated['class_id'])->exists();
         if (! $ownsClass) abort(403, 'Kamu tidak mengampu kelas ini.');
@@ -223,7 +224,7 @@ class TutorPresenceController extends Controller
             ]);
 
             // Create pupil presences — checked = hadir, all others in class = absent
-            $allPupilIds = \App\Models\Pupil::where('class_id', $validated['class_id'])
+            $allPupilIds = \App\Models\Pupil::whereHas('classes', fn($q) => $q->where('classes.id', $validated['class_id']))
                 ->where('active_status', true)
                 ->pluck('id');
 

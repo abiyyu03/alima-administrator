@@ -33,9 +33,9 @@ class RekapPupilPresenceController extends Controller
             ->get();
 
         // Group by pupil
-        $pupils = Pupil::with('schoolClass.courseType')
+        $pupils = Pupil::with('classes.courseType')
             ->where('active_status', true)
-            ->when($classId, fn($q) => $q->where('class_id', $classId))
+            ->when($classId, fn($q) => $q->whereHas('classes', fn($q2) => $q2->where('classes.id', $classId)))
             ->orderBy('name')
             ->get();
 
@@ -61,7 +61,7 @@ class RekapPupilPresenceController extends Controller
 
             $rows[] = [
                 'pupil'      => $pupil,
-                'className'  => $pupil->schoolClass?->name ?? '-',
+                'className'  => $pupil->classes->pluck('name')->join(', ') ?: '-',
                 'weeks'      => $weekCounts,
                 'total'      => $total,
                 'hadir'      => $hadir,

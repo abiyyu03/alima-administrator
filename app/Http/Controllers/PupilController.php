@@ -33,28 +33,26 @@ class PupilController extends Controller
 
     public function create()
     {
-        $classes = SchoolClass::with(['grade', 'courseType'])->orderBy('name')->get();
+        $classes      = SchoolClass::with(['grade', 'courseType'])->orderBy('name')->get();
+        $previewCode  = $this->generateCode();
 
-        return view('pupils.create', compact('classes'));
+        return view('pupils.create', compact('classes', 'previewCode'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'code'           => 'required|string|max:30|unique:pupils,code',
             'name'           => 'required|string|max:150',
             'dob'            => 'nullable|date',
             'gender'         => 'nullable|in:male,female',
             'class_ids'      => 'required|array|min:1',
             'class_ids.*'    => 'exists:classes,id',
-            'class_rates'    => 'nullable|array',
-            'class_rates.*'  => 'nullable|integer|min:0',
             'active_status'  => 'boolean',
             'dev_class_rate' => 'nullable|integer|min:0',
         ]);
 
         $pupil = Pupil::create([
-            'code'           => $request->code,
+            'code'           => $this->generateCode(),
             'name'           => $request->name,
             'dob'            => $request->dob,
             'gender'         => $request->gender,
@@ -79,20 +77,16 @@ class PupilController extends Controller
     public function update(Request $request, Pupil $pupil)
     {
         $request->validate([
-            'code'           => 'required|string|max:30|unique:pupils,code,' . $pupil->id,
             'name'           => 'required|string|max:150',
             'dob'            => 'nullable|date',
             'gender'         => 'nullable|in:male,female',
             'class_ids'      => 'required|array|min:1',
             'class_ids.*'    => 'exists:classes,id',
-            'class_rates'    => 'nullable|array',
-            'class_rates.*'  => 'nullable|integer|min:0',
             'active_status'  => 'boolean',
             'dev_class_rate' => 'nullable|integer|min:0',
         ]);
 
         $pupil->update([
-            'code'           => $request->code,
             'name'           => $request->name,
             'dob'            => $request->dob,
             'gender'         => $request->gender,
@@ -112,13 +106,23 @@ class PupilController extends Controller
         return back()->with('success', 'Siswa berhasil dihapus.');
     }
 
+    private function generateCode(): string
+    {
+        $prefix = now()->format('Ymd');
+
+        // Count pupils registered on the same date prefix
+        $count = Pupil::where('code', 'like', $prefix . '%')->count();
+
+        do {
+            $count++;
+            $code = $prefix . str_pad($count, 3, '0', STR_PAD_LEFT);
+        } while (Pupil::where('code', $code)->exists());
+
+        return $code;
+    }
+
     private function buildSyncData(Request $request): array
     {
-        $rates = $request->input('class_rates', []);
-        $sync  = [];
-        foreach ($request->class_ids as $classId) {
-            $sync[$classId] = ['rate' => (int) ($rates[$classId] ?? 0)];
-        }
-        return $sync;
+        return array_fill_keys($request->class_ids, []);
     }
 }

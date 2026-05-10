@@ -112,15 +112,21 @@
                                 <x-badge color="green">{{ $class->grade->name }}</x-badge>
                             </div>
                         </div>
+                        @php
+                            $pivotAmount  = (int) $class->pivot->amount;
+                            $isDefault    = $pivotAmount === 0;
+                            $defaultRate  = strtolower($class->courseType?->name ?? '') === 'private'
+                                ? (int) config('presence.tutor_rate_private')
+                                : (int) config('presence.tutor_rate_regular');
+                            $displayRate  = $isDefault ? $defaultRate : $pivotAmount;
+                        @endphp
                         <div class="text-right flex-shrink-0">
-                            @if($class->pivot->amount > 0)
-                                <p class="text-sm font-semibold text-gray-800">
-                                    Rp{{ number_format($class->pivot->amount, 0, ',', '.') }}
-                                </p>
-                                <p class="text-xs text-gray-400">/ sesi</p>
-                            @else
-                                <span class="text-xs text-gray-300 italic">Belum diatur</span>
-                            @endif
+                            <p class="text-sm font-semibold {{ $isDefault ? 'text-gray-400' : 'text-gray-800' }}">
+                                Rp{{ number_format($displayRate, 0, ',', '.') }}
+                            </p>
+                            <p class="text-xs {{ $isDefault ? 'text-gray-300' : 'text-gray-400' }}">
+                                {{ $isDefault ? 'default' : '/ sesi' }}
+                            </p>
                         </div>
                     </div>
                     @endforeach

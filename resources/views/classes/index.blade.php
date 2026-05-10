@@ -48,11 +48,11 @@
                 <td class="px-4 py-3 text-right">
                     <div class="flex items-center justify-end gap-2">
                         <x-btn href="{{ route('classes.edit', $class) }}" size="sm" variant="outline">Edit</x-btn>
-                        <form method="POST" action="{{ route('classes.destroy', $class) }}"
-                            onsubmit="return confirm('Hapus kelas {{ $class->name }}?')">
+                        <form method="POST" action="{{ route('classes.destroy', $class) }}" id="del-class-{{ $class->id }}">
                             @csrf @method('DELETE')
-                            <x-btn type="submit" size="sm" variant="danger">Hapus</x-btn>
                         </form>
+                        <x-btn type="button" size="sm" variant="danger" x-data
+                            @click="$store.deleteConfirm.show('Hapus kelas {{ addslashes($class->name) }}? Tindakan ini tidak dapat dibatalkan.', 'del-class-{{ $class->id }}')">Hapus</x-btn>
                     </div>
                 </td>
             </tr>
