@@ -190,8 +190,8 @@
                                 date: '{{ \Carbon\Carbon::parse($session->date)->translatedFormat('l, d M Y') }}',
                                 sessionDate: '{{ \Carbon\Carbon::parse($session->date)->format('Y-m-d') }}',
                                 photoUrl: '{{ $session->photo_file ? Storage::url($session->photo_file) : '' }}',
-                                pupils: @json($class->pupils->map(fn($pu) => ['id' => $pu->id, 'name' => $pu->name, 'code' => $pu->code])),
-                                presentPupilIds: @json($session->pupilPresences->where('status','presence')->pluck('pupil_id')),
+                                pupils: {{ Js::from($class->pupils->map(fn($pu) => ['id' => $pu->id, 'name' => $pu->name, 'code' => $pu->code])) }},
+                                presentPupilIds: {{ Js::from($session->pupilPresences->where('status','presence')->pluck('pupil_id')) }},
                             })"
                                             class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs text-gray-500 hover:bg-gray-100 transition">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
@@ -283,7 +283,7 @@
                                     <select name="pupil_ids[]" multiple
                                         id="pupil-select-{{ $class->id }}"
                                         class="pupil-multiselect w-full text-sm"
-                                        @s2change="count = $event.detail.count">
+                                        @change="count = Array.from($event.target.selectedOptions).filter(o => o.value).length">
                                         @foreach ($class->pupils as $pupil)
                                             <option value="{{ $pupil->id }}">
                                                 {{ $pupil->name }} ({{ $pupil->code }})
@@ -294,7 +294,7 @@
                                     <p class="text-xs mt-1.5" x-show="estimasi !== null"
                                         :class="count < minPupils ? 'text-amber-500' : 'text-green-600'">
                                         <span x-text="label"></span>:
-                                        Rp <span x-text="estimasi.toLocaleString('id-ID')"></span>
+                                        Rp <span x-text="estimasi?.toLocaleString('id-ID')"></span>
                                         <template x-if="count < minPupils && count > 0">
                                             <span class="text-gray-400"> (murid &lt; {{ $minPupils }})</span>
                                         </template>
@@ -575,10 +575,8 @@
                         allowClear: true,
                         width: '100%',
                     });
-                    // Use a non-'change' event name to avoid re-triggering jQuery's change listener
                     $(this).on('change', function () {
-                        const count = $(this).val()?.length ?? 0;
-                        this.dispatchEvent(new CustomEvent('s2change', { bubbles: true, detail: { count } }));
+                        this.dispatchEvent(new Event('change', { bubbles: true }));
                     });
                 }
             });
