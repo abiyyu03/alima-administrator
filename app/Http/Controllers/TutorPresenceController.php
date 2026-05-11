@@ -374,6 +374,55 @@ class TutorPresenceController extends Controller
         return $rate;
     }
 
+    public function destroy(TutorPresence $presence)
+    {
+        $this->deletePresenceAndSession($presence);
+
+        return back()->with('success', 'Presensi berhasil dihapus.');
+    }
+
+    public function destroyMyPresence(TutorPresence $presence)
+    {
+        $tutor = Auth::user()->tutor;
+
+        if (! $tutor || $presence->tutor_id !== $tutor->id) abort(403);
+
+        $week = $presence->classSession?->date
+            ? \Carbon\Carbon::parse($presence->classSession->date)->startOfWeek(\Carbon\Carbon::MONDAY)->format('Y-m-d')
+            : now()->format('Y-m-d');
+
+        $this->deletePresenceAndSession($presence);
+
+        return redirect()->route('my-presences', ['date' => $week])
+            ->with('success', 'Presensi berhasil dihapus.');
+    }
+
+    private function deletePresenceAndSession(TutorPresence $presence): void
+    {
+        $presence->load('classSession');
+        $session = $presence->classSession;
+
+        DB::transaction(function () use ($presence, $session) {
+            // Hapus salary record
+            TutorSalary::where('tutor_presence_id', $presence->id)->delete();
+
+            // Hapus tutor presence
+            $presence->delete();
+
+            // Jika session tidak lagi punya tutor presence lain, hapus session beserta data terkait
+            if ($session && $session->tutorPresences()->count() === 0) {
+                // Hapus foto
+                if ($session->photo_file) {
+                    Storage::disk('public')->delete($session->photo_file);
+                }
+                // Hapus pupil presences
+                $session->pupilPresences()->delete();
+                // Hapus session
+                $session->delete();
+            }
+        });
+    }
+
     private function syncSalary(TutorPresence $presence, float $amount): void
     {
         if ($amount > 0) {

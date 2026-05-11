@@ -40,11 +40,13 @@ Route::middleware(['auth', 'role'])->group(function () {
     // Admin: overview semua presensi tutor per minggu
     Route::get('tutor-presences', [TutorPresenceController::class, 'index'])->name('tutor-presences.index');
     Route::put('tutor-presences/{presence}', [TutorPresenceController::class, 'update'])->name('tutor-presences.update');
+    Route::delete('tutor-presences/{presence}', [TutorPresenceController::class, 'destroy'])->name('tutor-presences.destroy');
 
     // Tutor: self-service presensi
     Route::get('my-presences', [TutorPresenceController::class, 'myPresences'])->name('my-presences');
     Route::post('my-presences/sessions', [TutorPresenceController::class, 'storeMySession'])->name('my-presences.store');
     Route::put('my-presences/{presence}', [TutorPresenceController::class, 'updateMyPresence'])->name('my-presences.update');
+    Route::delete('my-presences/{presence}', [TutorPresenceController::class, 'destroyMyPresence'])->name('my-presences.destroy');
 
     Route::get('pupil-presences', [PupilPresenceController::class, 'allSessions'])->name('pupil-presences.index');
     Route::get('pupils/{pupil}/presences', [PupilPresenceController::class, 'pupilDetail'])->name('pupils.presences');
