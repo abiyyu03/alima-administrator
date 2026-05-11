@@ -39,6 +39,7 @@ class TutorPresenceController extends Controller
         $sessions = ClassSession::with([
             'schoolClass.grade',
             'schoolClass.courseType',
+            'schoolClass.pupils' => fn($q) => $q->where('active_status', true)->orderBy('name'),
             'tutorPresences.tutor',
             'pupilPresences',
         ])
@@ -77,34 +78,34 @@ class TutorPresenceController extends Controller
             'material'     => 'nullable|string|max:500',
             'session_date' => 'nullable|date',
             'photo'        => 'nullable|image|max:5120',
+            'pupil_ids'    => 'nullable|array',
+            'pupil_ids.*'  => 'exists:pupils,id',
         ]);
 
         $validated['status'] = 'presence';
 
         $presence->load('classSession.schoolClass.courseType');
         $rate   = self::getRate($presence->classSession, $presence->tutor_id);
-        $amount = $this->calcAmount($presence->classSession, $presence->tutor_id, 'presence');
 
-        $newPhotoPath = null;
-        if ($request->hasFile('photo')) {
-            $oldPhoto = $presence->classSession->photo_file;
-            if ($oldPhoto) {
-                Storage::disk('public')->delete($oldPhoto);
-            }
-            $newPhotoPath = $request->file('photo')->store('session-photos', 'public');
-        }
-
-        DB::transaction(function () use ($presence, $validated, $amount, $rate, $newPhotoPath) {
+        DB::transaction(function () use ($presence, $validated, $rate, $request) {
             $sessionUpdate = ['material' => $validated['material'] ?? null];
             if (! empty($validated['session_date'])) {
                 $sessionUpdate['date'] = $validated['session_date'];
             }
-            if ($newPhotoPath !== null) {
-                $sessionUpdate['photo_file'] = $newPhotoPath;
+            if ($request->hasFile('photo')) {
+                $oldPhoto = $presence->classSession->photo_file;
+                if ($oldPhoto) Storage::disk('public')->delete($oldPhoto);
+                $sessionUpdate['photo_file'] = $request->file('photo')->store('session-photos', 'public');
             }
+
+            $this->syncPupilPresences($presence->classSession, $validated['pupil_ids'] ?? null);
+            $sessionUpdate['number_of_pupils'] = $presence->classSession->pupilPresences()->where('status', 'presence')->count();
+
             $presence->classSession->update($sessionUpdate);
+
+            $amount = $this->calcAmount($presence->classSession->fresh(), $presence->tutor_id, 'presence');
             $presence->update([
-                'status' => $validated['status'],
+                'status' => 'presence',
                 'amount' => $amount,
                 'rate'   => $rate,
                 'note'   => $validated['note'] ?? null,
@@ -114,6 +115,7 @@ class TutorPresenceController extends Controller
         });
 
         return back()->with('success', 'Presensi berhasil diperbarui.');
+
     }
 
     /**
@@ -271,34 +273,34 @@ class TutorPresenceController extends Controller
             'week'         => 'nullable|date',
             'session_date' => 'nullable|date',
             'photo'        => 'nullable|image|max:5120',
+            'pupil_ids'    => 'nullable|array',
+            'pupil_ids.*'  => 'exists:pupils,id',
         ]);
 
         $validated['status'] = 'presence';
 
         $presence->load('classSession.schoolClass.courseType');
-        $rate   = self::getRate($presence->classSession, $tutor->id);
-        $amount = $this->calcAmount($presence->classSession, $tutor->id, 'presence');
+        $rate = self::getRate($presence->classSession, $tutor->id);
 
-        $newPhotoPath = null;
-        if ($request->hasFile('photo')) {
-            $oldPhoto = $presence->classSession->photo_file;
-            if ($oldPhoto) {
-                Storage::disk('public')->delete($oldPhoto);
-            }
-            $newPhotoPath = $request->file('photo')->store('session-photos', 'public');
-        }
-
-        DB::transaction(function () use ($presence, $validated, $amount, $rate, $newPhotoPath) {
+        DB::transaction(function () use ($presence, $validated, $rate, $request) {
             $sessionUpdate = ['material' => $validated['material'] ?? null];
-            if ($newPhotoPath !== null) {
-                $sessionUpdate['photo_file'] = $newPhotoPath;
-            }
             if (! empty($validated['session_date'])) {
                 $sessionUpdate['date'] = $validated['session_date'];
             }
+            if ($request->hasFile('photo')) {
+                $oldPhoto = $presence->classSession->photo_file;
+                if ($oldPhoto) Storage::disk('public')->delete($oldPhoto);
+                $sessionUpdate['photo_file'] = $request->file('photo')->store('session-photos', 'public');
+            }
+
+            $this->syncPupilPresences($presence->classSession, $validated['pupil_ids'] ?? null);
+            $sessionUpdate['number_of_pupils'] = $presence->classSession->pupilPresences()->where('status', 'presence')->count();
+
             $presence->classSession->update($sessionUpdate);
+
+            $amount = $this->calcAmount($presence->classSession->fresh(), $presence->tutor_id, 'presence');
             $presence->update([
-                'status' => $validated['status'],
+                'status' => 'presence',
                 'amount' => $amount,
                 'rate'   => $rate,
                 'note'   => $validated['note'] ?? null,
@@ -359,9 +361,6 @@ class TutorPresenceController extends Controller
 
             $minPupils = (int) config('presence.regular_min_pupils');
 
-            if ($pupilsHadir === 0) {
-                return (float) config('presence.regular_min_incentive') + $extra;
-            }
             if ($pupilsHadir < $minPupils) {
                 return (float) config('presence.regular_min_incentive') + $extra;
             }
@@ -421,6 +420,21 @@ class TutorPresenceController extends Controller
                 $session->delete();
             }
         });
+    }
+
+    private function syncPupilPresences(ClassSession $session, ?array $presentIds): void
+    {
+        $allPupilIds = \App\Models\Pupil::whereHas('classes', fn($q) => $q->where('classes.id', $session->class_id))
+            ->where('active_status', true)
+            ->pluck('id');
+
+        foreach ($allPupilIds as $pid) {
+            $status = ($presentIds !== null && in_array($pid, $presentIds)) ? 'presence' : 'absent';
+            \App\Models\PupilPresence::updateOrCreate(
+                ['class_session_id' => $session->id, 'pupil_id' => $pid],
+                ['status' => $status]
+            );
+        }
     }
 
     private function syncSalary(TutorPresence $presence, float $amount): void

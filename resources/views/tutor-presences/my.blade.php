@@ -190,6 +190,8 @@
                                 date: '{{ \Carbon\Carbon::parse($session->date)->translatedFormat('l, d M Y') }}',
                                 sessionDate: '{{ \Carbon\Carbon::parse($session->date)->format('Y-m-d') }}',
                                 photoUrl: '{{ $session->photo_file ? Storage::url($session->photo_file) : '' }}',
+                                pupils: @json($class->pupils->map(fn($pu) => ['id' => $pu->id, 'name' => $pu->name, 'code' => $pu->code])),
+                                presentPupilIds: @json($session->pupilPresences->where('status','presence')->pluck('pupil_id')),
                             })"
                                             class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs text-gray-500 hover:bg-gray-100 transition">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
@@ -281,7 +283,7 @@
                                     <select name="pupil_ids[]" multiple
                                         id="pupil-select-{{ $class->id }}"
                                         class="pupil-multiselect w-full text-sm"
-                                        @change="count = Array.from($event.target.selectedOptions).filter(o => o.value).length">
+                                        @change="count = ($event.detail?.count ?? Array.from($event.target.selectedOptions).filter(o => o.value).length)">
                                         @foreach ($class->pupils as $pupil)
                                             <option value="{{ $pupil->id }}">
                                                 {{ $pupil->name }} ({{ $pupil->code }})
@@ -478,6 +480,19 @@
                             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                     </div>
 
+                    {{-- Siswa Hadir --}}
+                    <div x-show="current.pupils && current.pupils.length > 0">
+                        <label class="block text-xs font-medium text-gray-600 mb-1.5">Siswa Hadir</label>
+                        <select name="pupil_ids[]" multiple class="pupil-multiselect-my-edit w-full text-sm">
+                            <template x-for="p in (current.pupils || [])" :key="p.id">
+                                <option :value="p.id"
+                                    :selected="(current.presentPupilIds || []).includes(p.id)"
+                                    x-text="p.name + ' (' + p.code + ')'">
+                                </option>
+                            </template>
+                        </select>
+                    </div>
+
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">
                             Materi <span class="text-gray-400 font-normal">(opsional)</span>
@@ -560,9 +575,10 @@
                         allowClear: true,
                         width: '100%',
                     });
-                    // Dispatch native change so Alpine x-data can react
+                    // Dispatch custom change event with Select2 count so Alpine x-data reacts correctly
                     $(this).on('change', function () {
-                        this.dispatchEvent(new Event('change', { bubbles: true }));
+                        const count = $(this).val()?.length ?? 0;
+                        this.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { count } }));
                     });
                 }
             });
@@ -598,6 +614,17 @@
                                 const alpine = form._x_dataStack?.[0];
                                 if (alpine) alpine.preview = null;
                             }
+
+                            // Init Select2 for edit pupil select
+                            this.$nextTick(() => {
+                                const sel = this.$el.querySelector('.pupil-multiselect-my-edit');
+                                if (sel) {
+                                    if ($(sel).hasClass('select2-hidden-accessible')) $(sel).select2('destroy');
+                                    $(sel).select2({ placeholder: '— Pilih siswa yang hadir —', allowClear: true, width: '100%' });
+                                    const ids = (e.detail.presentPupilIds || []).map(String);
+                                    $(sel).val(ids).trigger('change');
+                                }
+                            });
                         });
                     });
                 },

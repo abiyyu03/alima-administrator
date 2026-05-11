@@ -270,6 +270,8 @@
                                                         note: '{{ addslashes($p->note ?? '') }}',
                                                         material: '{{ addslashes($session->material ?? '') }}',
                                                         photoUrl: '{{ $session->photo_file ? Storage::url($session->photo_file) : '' }}',
+                                                        pupils: @json($session->schoolClass->pupils->map(fn($pu) => ['id' => $pu->id, 'name' => $pu->name, 'code' => $pu->code])),
+                                                        presentPupilIds: @json($session->pupilPresences->where('status','presence')->pluck('pupil_id')),
                                                     })"
                                                     class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs text-gray-600 hover:bg-gray-50 transition">
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -328,6 +330,20 @@
                         <label class="block text-xs font-medium text-gray-600 mb-1">Tanggal Sesi</label>
                         <input type="date" name="session_date" x-model="current.sessionDate"
                             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                    </div>
+
+                    {{-- Siswa Hadir --}}
+                    <div x-show="current.pupils && current.pupils.length > 0">
+                        <label class="block text-xs font-medium text-gray-600 mb-1.5">Siswa Hadir</label>
+                        <select name="pupil_ids[]" multiple class="pupil-multiselect-edit w-full text-sm"
+                            x-ref="pupilSelect">
+                            <template x-for="p in (current.pupils || [])" :key="p.id">
+                                <option :value="p.id"
+                                    :selected="(current.presentPupilIds || []).includes(p.id)"
+                                    x-text="p.name + ' (' + p.code + ')'">
+                                </option>
+                            </template>
+                        </select>
                     </div>
 
                     {{-- Materi --}}
@@ -394,7 +410,21 @@
 
 @endsection
 
+@push('styles')
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <style>
+        .select2-container--default .select2-selection--multiple { border-radius:.5rem;border-color:#d1d5db;min-height:38px;padding:2px 6px; }
+        .select2-container--default.select2-container--focus .select2-selection--multiple { border-color:#4ade80;box-shadow:0 0 0 2px rgb(74 222 128/.4); }
+        .select2-container--default .select2-selection--multiple .select2-selection__choice { background:#dcfce7;border-color:#86efac;color:#166534;border-radius:.375rem;font-size:.75rem;padding:1px 6px; }
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove { color:#16a34a; }
+        .select2-dropdown { border-color:#d1d5db;border-radius:.5rem;font-size:.875rem; }
+        .select2-search--dropdown .select2-search__field { border-radius:.375rem;border-color:#d1d5db; }
+    </style>
+@endpush
+
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 function presenceAdmin() {
     return {
@@ -412,6 +442,18 @@ function presenceAdmin() {
                     const alpine = form._x_dataStack?.[0];
                     if (alpine) alpine.preview = null;
                 }
+
+                // Init Select2 for pupil select after Alpine renders options
+                this.$nextTick(() => {
+                    const sel = this.$el.querySelector('.pupil-multiselect-edit');
+                    if (sel) {
+                        if ($(sel).hasClass('select2-hidden-accessible')) $(sel).select2('destroy');
+                        $(sel).select2({ placeholder: '— Pilih siswa yang hadir —', allowClear: true, width: '100%' });
+                        // Pre-select present pupils
+                        const ids = (data.presentPupilIds || []).map(String);
+                        $(sel).val(ids).trigger('change');
+                    }
+                });
             });
         },
     };
