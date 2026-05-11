@@ -133,9 +133,6 @@
 
             <x-card>
                 <p class="text-xs text-gray-500 mb-3">Hapus data siswa ini secara permanen.</p>
-                <form method="POST" action="{{ route('pupils.destroy', $pupil) }}" id="del-pupil-edit">
-                    @csrf @method('DELETE')
-                </form>
                 <x-btn type="button" variant="danger" class="w-full justify-center" x-data
                     @click="$store.deleteConfirm.show('Hapus siswa {{ addslashes($pupil->name) }}? Tindakan ini tidak dapat dibatalkan.', 'del-pupil-edit')">Hapus Siswa</x-btn>
             </x-card>
@@ -143,5 +140,9 @@
         </div>
 
     </div>
+</form>
+
+<form method="POST" action="{{ route('pupils.destroy', $pupil) }}" id="del-pupil-edit">
+    @csrf @method('DELETE')
 </form>
 @endsection
