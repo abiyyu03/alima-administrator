@@ -283,7 +283,7 @@
                                     <select name="pupil_ids[]" multiple
                                         id="pupil-select-{{ $class->id }}"
                                         class="pupil-multiselect w-full text-sm"
-                                        @change="count = ($event.detail?.count ?? Array.from($event.target.selectedOptions).filter(o => o.value).length)">
+                                        @s2change="count = $event.detail.count">
                                         @foreach ($class->pupils as $pupil)
                                             <option value="{{ $pupil->id }}">
                                                 {{ $pupil->name }} ({{ $pupil->code }})
@@ -575,10 +575,10 @@
                         allowClear: true,
                         width: '100%',
                     });
-                    // Dispatch custom change event with Select2 count so Alpine x-data reacts correctly
+                    // Use a non-'change' event name to avoid re-triggering jQuery's change listener
                     $(this).on('change', function () {
                         const count = $(this).val()?.length ?? 0;
-                        this.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { count } }));
+                        this.dispatchEvent(new CustomEvent('s2change', { bubbles: true, detail: { count } }));
                     });
                 }
             });
