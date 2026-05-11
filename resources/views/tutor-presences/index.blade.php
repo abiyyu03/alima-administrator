@@ -378,11 +378,12 @@
                     </button>
                 </form>
 
-                <form method="POST" :action="'/tutor-presences/' + current.presenceId" :id="'del-tp-' + current.presenceId" class="mt-2">
+                <form method="POST" id="del-tp-presence" action=""
+                    x-effect="$el.action = '/tutor-presences/' + (current.presenceId ?? '')">
                     @csrf @method('DELETE')
                 </form>
-                <button type="button" x-data
-                    @click="$store.deleteConfirm.show('Hapus presensi ' + current.tutorName + ' (' + current.date + ')? Sesi dan data siswa ikut terhapus jika tidak ada tutor lain.', 'del-tp-' + current.presenceId)"
+                <button type="button"
+                    @click="$store.deleteConfirm.show('Hapus presensi ' + current.tutorName + ' (' + current.date + ')? Sesi dan data siswa ikut terhapus jika tidak ada tutor lain.', 'del-tp-presence')"
                     class="w-full py-2.5 rounded-xl border border-red-300 text-red-600 hover:bg-red-50 text-sm font-semibold transition">
                     Hapus Presensi
                 </button>
