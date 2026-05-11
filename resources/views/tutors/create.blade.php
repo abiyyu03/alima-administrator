@@ -100,7 +100,7 @@
                                     </label>
                                     <div x-show="checked" x-transition class="mt-2.5 pl-6 space-y-2">
                                         <div>
-                                            <p class="text-xs text-gray-400 mb-1">Gaji per sesi <span class="text-gray-300">(0 = default: Rp {{ number_format($defaultRate, 0, ',', '.') }})</span></p>
+                                            <p class="text-xs text-gray-400 mb-1">Gaji per sesi</p>
                                             <div class="relative">
                                                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">Rp</span>
                                                 <input type="number" name="amounts[{{ $class->id }}]"
