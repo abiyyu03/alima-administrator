@@ -68,11 +68,12 @@
                                     $isChecked     = old('class_ids') !== null
                                         ? in_array($class->id, old('class_ids', []))
                                         : $assignedAmounts->has($class->id);
-                                    $currentAmount   = old('amounts.' . $class->id, $assignedAmounts->get($class->id, 0));
-                                    $currentExtraFee = old('extra_fees.' . $class->id, $assignedExtraFees->get($class->id, 0));
                                     $defaultRate     = strtolower($typeName) === 'private'
                                         ? config('presence.tutor_rate_private')
                                         : config('presence.tutor_rate_regular');
+                                    $rawAmount       = old('amounts.' . $class->id, $assignedAmounts->get($class->id, 0));
+                                    $currentAmount   = $rawAmount > 0 ? $rawAmount : $defaultRate;
+                                    $currentExtraFee = old('extra_fees.' . $class->id, $assignedExtraFees->get($class->id, 0));
                                 @endphp
                                 <div x-data="{ checked: {{ $isChecked ? 'true' : 'false' }} }"
                                      x-show="'{{ strtolower($class->name . ' ' . $class->grade->name) }}'.includes(search.toLowerCase())"

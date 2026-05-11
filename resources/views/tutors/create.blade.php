@@ -104,7 +104,7 @@
                                             <div class="relative">
                                                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">Rp</span>
                                                 <input type="number" name="amounts[{{ $class->id }}]"
-                                                    value="{{ old('amounts.' . $class->id, 0) }}"
+                                                    value="{{ old('amounts.' . $class->id, $defaultRate) }}"
                                                     min="0" step="500" placeholder="0"
                                                     class="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                                             </div>
