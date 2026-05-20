@@ -458,34 +458,16 @@ class TutorPresenceController extends Controller
     private function compressPhoto(string $storagePath, int $maxDim = 1920, int $quality = 82): void
     {
         $fullPath = Storage::disk('public')->path($storagePath);
-        $info     = @getimagesize($fullPath);
-        if (! $info) return;
+        $newPath  = preg_replace('/\.[^.]+$/', '.jpg', $storagePath);
 
-        [$origW, $origH, $type] = $info;
+        (new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Imagick\Driver()))
+            ->decode($fullPath)
+            ->scaleDown($maxDim, $maxDim)
+            ->encode(new \Intervention\Image\Encoders\JpegEncoder($quality))
+            ->save(Storage::disk('public')->path($newPath));
 
-        $src = match ($type) {
-            IMAGETYPE_JPEG => @\imagecreatefromjpeg($fullPath),
-            IMAGETYPE_PNG  => @\imagecreatefrompng($fullPath),
-            IMAGETYPE_WEBP => @\imagecreatefromwebp($fullPath),
-            default        => null,
-        };
-        if (! $src) return;
-
-        $w = $origW; $h = $origH;
-        if ($w > $maxDim || $h > $maxDim) {
-            if ($w >= $h) { $h = (int) round($h / $w * $maxDim); $w = $maxDim; }
-            else          { $w = (int) round($w / $h * $maxDim); $h = $maxDim; }
-            $dst = \imagecreatetruecolor($w, $h);
-            \imagecopyresampled($dst, $src, 0, 0, 0, 0, $w, $h, $origW, $origH);
-            $src = $dst;
-        }
-
-        \imagejpeg($src, $fullPath, $quality);
-
-        // Rename stored path to .jpg if extension differs
-        $newPath = preg_replace('/\.[^.]+$/', '.jpg', $storagePath);
         if ($newPath !== $storagePath) {
-            Storage::disk('public')->move($storagePath, $newPath);
+            Storage::disk('public')->delete($storagePath);
         }
     }
 
