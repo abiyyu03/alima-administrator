@@ -21,7 +21,7 @@ class TutorController extends Controller
 
     public function create()
     {
-        $classes = SchoolClass::with(['grade', 'courseType'])->orderBy('name')->get();
+        $classes = SchoolClass::with(['grade', 'courseType', 'pupils'])->orderBy('name')->get();
 
         return view('tutors.create', compact('classes'));
     }
@@ -65,7 +65,7 @@ class TutorController extends Controller
     public function edit(Tutor $tutor)
     {
         $tutor->load('classes.grade', 'classes.courseType');
-        $classes = SchoolClass::with(['grade', 'courseType'])->orderBy('name')->get();
+        $classes = SchoolClass::with(['grade', 'courseType', 'pupils'])->orderBy('name')->get();
 
         $assignedAmounts   = $tutor->classes->pluck('pivot.amount', 'id');
         $assignedExtraFees = $tutor->classes->pluck('pivot.extra_fee', 'id');

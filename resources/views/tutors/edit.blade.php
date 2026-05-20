@@ -86,7 +86,12 @@
                                             class="mt-0.5 rounded border-gray-300 text-green-600 focus:ring-green-400">
                                         <div class="flex-1 min-w-0">
                                             <p class="text-sm font-medium text-gray-800 leading-tight">{{ $class->name }}</p>
-                                            <p class="text-xs text-gray-400">{{ $class->grade->name }}</p>
+                                            <p class="text-xs text-gray-400">
+                                                {{ $class->grade->name }}
+                                                @if(strtolower($typeName) === 'private' && $class->pupils->isNotEmpty())
+                                                    · {{ $class->pupils->first()->name }}
+                                                @endif
+                                            </p>
                                         </div>
                                     </label>
                                     <div x-show="checked" x-transition class="mt-2.5 pl-6 space-y-2">

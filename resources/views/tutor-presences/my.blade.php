@@ -86,6 +86,17 @@
             <div x-data="presenceCard({{ $class->id }})"
                 class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden w-full md:w-[400px] md:flex-shrink-0">
 
+                @php
+                    $pivotAmt      = (int) $class->pivot->amount;
+                    $isRegular     = strtolower($class->courseType->name) === 'regular';
+                    $effectiveRate = $pivotAmt > 0 ? $pivotAmt
+                        : (strtolower($class->courseType->name) === 'private'
+                            ? (int) config('presence.tutor_rate_private')
+                            : (int) config('presence.tutor_rate_regular'));
+                    $minPupils    = (int) config('presence.regular_min_pupils');
+                    $minIncentive = (int) config('presence.regular_min_incentive');
+                    $extraFee     = (int) ($class->pivot->extra_fee ?? 0);
+                @endphp
                 {{-- Card Header --}}
                 <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
                     <div class="min-w-0">
@@ -99,18 +110,10 @@
                                 {{ $class->courseType->name }}
                             </span>
                         </div>
+                        @if(!$isRegular && $class->pupils->isNotEmpty())
+                            <p class="text-xs text-gray-600 font-medium mt-1">{{ $class->pupils->first()->name }}</p>
+                        @endif
                     </div>
-                    @php
-                        $pivotAmt     = (int) $class->pivot->amount;
-                        $effectiveRate = $pivotAmt > 0 ? $pivotAmt
-                            : (strtolower($class->courseType->name) === 'private'
-                                ? (int) config('presence.tutor_rate_private')
-                                : (int) config('presence.tutor_rate_regular'));
-                        $isRegular    = strtolower($class->courseType->name) === 'regular';
-                        $minPupils    = (int) config('presence.regular_min_pupils');
-                        $minIncentive = (int) config('presence.regular_min_incentive');
-                        $extraFee     = (int) ($class->pivot->extra_fee ?? 0);
-                    @endphp
                     <div class="text-right shrink-0">
                         <p class="text-xs text-gray-400">{{ $isRegular ? 'Rate / siswa' : 'Rate / sesi' }}</p>
                         <p class="text-sm font-bold text-green-700">Rp {{ number_format($effectiveRate, 0, ',', '.') }}</p>
@@ -190,6 +193,7 @@
                                 date: '{{ \Carbon\Carbon::parse($session->date)->translatedFormat('l, d M Y') }}',
                                 sessionDate: '{{ \Carbon\Carbon::parse($session->date)->format('Y-m-d') }}',
                                 photoUrl: '{{ $session->photo_file ? Storage::url($session->photo_file) : '' }}',
+                                isPrivate: {{ $isRegular ? 'false' : 'true' }},
                                 pupils: {{ Js::from($class->pupils->map(fn($pu) => ['id' => $pu->id, 'name' => $pu->name, 'code' => $pu->code])) }},
                                 presentPupilIds: {{ Js::from($session->pupilPresences->where('status','presence')->pluck('pupil_id')) }},
                             })"
@@ -258,8 +262,8 @@
                                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                             </div>
 
-                            {{-- Siswa Hadir --}}
-                            @if ($class->pupils->isNotEmpty())
+                            {{-- Siswa Hadir (hanya untuk Regular) --}}
+                            @if ($isRegular && $class->pupils->isNotEmpty())
                                 <div x-data="{
                                     count: 0,
                                     isRegular: {{ $isRegular ? 'true' : 'false' }},
@@ -480,8 +484,8 @@
                             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                     </div>
 
-                    {{-- Siswa Hadir --}}
-                    <div x-show="current.pupils && current.pupils.length > 0">
+                    {{-- Siswa Hadir (hanya untuk Regular) --}}
+                    <div x-show="current.pupils && current.pupils.length > 0 && !current.isPrivate">
                         <label class="block text-xs font-medium text-gray-600 mb-1.5">Siswa Hadir</label>
                         <select name="pupil_ids[]" multiple class="pupil-multiselect-my-edit w-full text-sm">
                             <template x-for="p in (current.pupils || [])" :key="p.id">
