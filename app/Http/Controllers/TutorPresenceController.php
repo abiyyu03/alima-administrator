@@ -77,7 +77,7 @@ class TutorPresenceController extends Controller
             'note'         => 'nullable|string|max:500',
             'material'     => 'nullable|string|max:500',
             'session_date' => 'nullable|date',
-            'photo'        => 'nullable|image|max:5120',
+            'photo'        => 'nullable|image|max:6144',
             'pupil_ids'    => 'nullable|array',
             'pupil_ids.*'  => 'exists:pupils,id',
         ]);
@@ -96,7 +96,9 @@ class TutorPresenceController extends Controller
             if ($request->hasFile('photo')) {
                 $oldPhoto = $presence->classSession->photo_file;
                 if ($oldPhoto) Storage::disk('public')->delete($oldPhoto);
-                $sessionUpdate['photo_file'] = $request->file('photo')->store('session-photos', 'public');
+                $path = $request->file('photo')->store('session-photos', 'public');
+                $this->compressPhoto($path);
+                $sessionUpdate['photo_file'] = preg_replace('/\.[^.]+$/', '.jpg', $path);
             }
 
             $pupilIds = $isPrivate
@@ -213,9 +215,12 @@ class TutorPresenceController extends Controller
         $ownsClass = $tutor->classes()->where('classes.id', $validated['class_id'])->exists();
         if (! $ownsClass) abort(403, 'Kamu tidak mengampu kelas ini.');
 
-        $photoPath = $request->hasFile('photo')
-            ? $request->file('photo')->store('session-photos', 'public')
-            : null;
+        $photoPath = null;
+        if ($request->hasFile('photo')) {
+            $photoPath = $request->file('photo')->store('session-photos', 'public');
+            $this->compressPhoto($photoPath);
+            $photoPath = preg_replace('/\.[^.]+$/', '.jpg', $photoPath);
+        }
 
         $schoolClass = \App\Models\SchoolClass::with('courseType')->find($validated['class_id']);
         $isPrivate   = strtolower($schoolClass->courseType?->name ?? '') === 'private';
@@ -279,7 +284,7 @@ class TutorPresenceController extends Controller
             'material'     => 'nullable|string|max:500',
             'week'         => 'nullable|date',
             'session_date' => 'nullable|date',
-            'photo'        => 'nullable|image|max:5120',
+            'photo'        => 'nullable|image|max:6144',
             'pupil_ids'    => 'nullable|array',
             'pupil_ids.*'  => 'exists:pupils,id',
         ]);
@@ -298,7 +303,9 @@ class TutorPresenceController extends Controller
             if ($request->hasFile('photo')) {
                 $oldPhoto = $presence->classSession->photo_file;
                 if ($oldPhoto) Storage::disk('public')->delete($oldPhoto);
-                $sessionUpdate['photo_file'] = $request->file('photo')->store('session-photos', 'public');
+                $path = $request->file('photo')->store('session-photos', 'public');
+                $this->compressPhoto($path);
+                $sessionUpdate['photo_file'] = preg_replace('/\.[^.]+$/', '.jpg', $path);
             }
 
             $pupilIds = $isPrivate
@@ -445,6 +452,40 @@ class TutorPresenceController extends Controller
                 ['class_session_id' => $session->id, 'pupil_id' => $pid],
                 ['status' => $status]
             );
+        }
+    }
+
+    private function compressPhoto(string $storagePath, int $maxDim = 1920, int $quality = 82): void
+    {
+        $fullPath = Storage::disk('public')->path($storagePath);
+        $info     = @getimagesize($fullPath);
+        if (! $info) return;
+
+        [$origW, $origH, $type] = $info;
+
+        $src = match ($type) {
+            IMAGETYPE_JPEG => @\imagecreatefromjpeg($fullPath),
+            IMAGETYPE_PNG  => @\imagecreatefrompng($fullPath),
+            IMAGETYPE_WEBP => @\imagecreatefromwebp($fullPath),
+            default        => null,
+        };
+        if (! $src) return;
+
+        $w = $origW; $h = $origH;
+        if ($w > $maxDim || $h > $maxDim) {
+            if ($w >= $h) { $h = (int) round($h / $w * $maxDim); $w = $maxDim; }
+            else          { $w = (int) round($w / $h * $maxDim); $h = $maxDim; }
+            $dst = \imagecreatetruecolor($w, $h);
+            \imagecopyresampled($dst, $src, 0, 0, 0, 0, $w, $h, $origW, $origH);
+            $src = $dst;
+        }
+
+        \imagejpeg($src, $fullPath, $quality);
+
+        // Rename stored path to .jpg if extension differs
+        $newPath = preg_replace('/\.[^.]+$/', '.jpg', $storagePath);
+        if ($newPath !== $storagePath) {
+            Storage::disk('public')->move($storagePath, $newPath);
         }
     }
 

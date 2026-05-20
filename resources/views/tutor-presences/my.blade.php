@@ -339,8 +339,8 @@
                                     <input type="file" name="photo" accept="image/*" class="hidden"
                                         @change="
                                             const f = $event.target.files[0];
-                                            if (f && f.size > 5 * 1024 * 1024) {
-                                                alert('Ukuran file melebihi batas maksimal 5 MB.');
+                                            if (f && f.size > 6 * 1024 * 1024) {
+                                                alert('Ukuran file melebihi batas maksimal 6 MB.');
                                                 $event.target.value = '';
                                                 preview = null;
                                             } else {
