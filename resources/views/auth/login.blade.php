@@ -11,6 +11,7 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#14532d">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
     style="background: linear-gradient(135deg, #064e3b 0%, #065f46 30%, #047857 60%, #0d9488 100%);">
@@ -74,6 +75,10 @@
                            class="rounded border-gray-300 text-green-400 focus:ring-green-400">
                     <label for="remember" class="text-sm text-gray-600">Ingat saya</label>
                 </div>
+
+                @if(config('services.turnstile.enabled'))
+                <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}" data-theme="light"></div>
+                @endif
 
                 <button type="submit"
                     class="w-full mt-2 py-2.5 rounded-lg text-sm font-semibold transition"
