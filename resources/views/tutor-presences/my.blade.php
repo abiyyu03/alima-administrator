@@ -9,11 +9,13 @@
             min-height: 38px;
             padding: 2px 6px;
         }
+
         .select2-container--default.select2-container--focus .select2-selection--multiple {
             border-color: #4ade80;
             outline: none;
             box-shadow: 0 0 0 2px rgb(74 222 128 / 0.4);
         }
+
         .select2-container--default .select2-selection--multiple .select2-selection__choice {
             background-color: #dcfce7;
             border-color: #86efac;
@@ -22,11 +24,21 @@
             font-size: 0.75rem;
             padding: 1px 6px;
         }
+
         .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
             color: #16a34a;
         }
-        .select2-dropdown { border-color: #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; }
-        .select2-search--dropdown .select2-search__field { border-radius: 0.375rem; border-color: #d1d5db; }
+
+        .select2-dropdown {
+            border-color: #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .select2-search--dropdown .select2-search__field {
+            border-radius: 0.375rem;
+            border-color: #d1d5db;
+        }
     </style>
 @endpush
 
@@ -87,15 +99,17 @@
                 class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden w-full md:w-[400px] md:flex-shrink-0">
 
                 @php
-                    $pivotAmt      = (int) $class->pivot->amount;
-                    $isRegular     = strtolower($class->courseType->name) === 'regular';
-                    $effectiveRate = $pivotAmt > 0 ? $pivotAmt
-                        : (strtolower($class->courseType->name) === 'private'
-                            ? (int) config('presence.tutor_rate_private')
-                            : (int) config('presence.tutor_rate_regular'));
-                    $minPupils    = (int) config('presence.regular_min_pupils');
+                    $pivotAmt = (int) $class->pivot->amount;
+                    $isRegular = strtolower($class->courseType->name) === 'regular';
+                    $effectiveRate =
+                        $pivotAmt > 0
+                            ? $pivotAmt
+                            : (strtolower($class->courseType->name) === 'private'
+                                ? (int) config('presence.tutor_rate_private')
+                                : (int) config('presence.tutor_rate_regular'));
+                    $minPupils = (int) config('presence.regular_min_pupils');
                     $minIncentive = (int) config('presence.regular_min_incentive');
-                    $extraFee     = (int) ($class->pivot->extra_fee ?? 0);
+                    $extraFee = (int) ($class->pivot->extra_fee ?? 0);
                 @endphp
                 {{-- Card Header --}}
                 <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
@@ -110,15 +124,17 @@
                                 {{ $class->courseType->name }}
                             </span>
                         </div>
-                        @if(!$isRegular && $class->pupils->isNotEmpty())
-                            <p class="text-xs text-gray-600 font-medium mt-1">{{ $class->pupils->first()->name }}</p>
+                        @if (!$isRegular && $class->pupils->isNotEmpty())
+                            <p class="text-xs text-gray-600 font-medium mt-1">
+                                {{ $class->pupils->pluck('name')->join(', ') }}</p>
                         @endif
                     </div>
                     <div class="text-right shrink-0">
                         <p class="text-xs text-gray-400">{{ $isRegular ? 'Rate / siswa' : 'Rate / sesi' }}</p>
                         <p class="text-sm font-bold text-green-700">Rp {{ number_format($effectiveRate, 0, ',', '.') }}</p>
-                        @if($isRegular)
-                            <p class="text-xs text-gray-400 mt-0.5">&lt; {{ $minPupils }} siswa → Rp {{ number_format($minIncentive + $extraFee, 0, ',', '.') }}</p>
+                        @if ($isRegular)
+                            <p class="text-xs text-gray-400 mt-0.5">&lt; {{ $minPupils }} siswa → Rp
+                                {{ number_format($minIncentive + $extraFee, 0, ',', '.') }}</p>
                         @endif
                     </div>
                 </div>
@@ -195,7 +211,7 @@
                                 photoUrl: '{{ $session->photo_file ? Storage::url($session->photo_file) : '' }}',
                                 isPrivate: {{ $isRegular ? 'false' : 'true' }},
                                 pupils: {{ Js::from($class->pupils->map(fn($pu) => ['id' => $pu->id, 'name' => $pu->name, 'code' => $pu->code])) }},
-                                presentPupilIds: {{ Js::from($session->pupilPresences->where('status','presence')->pluck('pupil_id')) }},
+                                presentPupilIds: {{ Js::from($session->pupilPresences->where('status', 'presence')->pluck('pupil_id')) }},
                             })"
                                             class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs text-gray-500 hover:bg-gray-100 transition">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
@@ -262,8 +278,8 @@
                                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                             </div>
 
-                            {{-- Siswa Hadir (hanya untuk Regular) --}}
-                            @if ($isRegular && $class->pupils->isNotEmpty())
+                            {{-- Siswa Hadir (Regular & Private) --}}
+                            @if ($class->pupils->isNotEmpty())
                                 <div x-data="{
                                     count: 0,
                                     isRegular: {{ $isRegular ? 'true' : 'false' }},
@@ -284,25 +300,25 @@
                                     }
                                 }">
                                     <label class="block text-xs font-medium text-gray-600 mb-1.5">Siswa Hadir</label>
-                                    <select name="pupil_ids[]" multiple
-                                        id="pupil-select-{{ $class->id }}"
+                                    <select name="pupil_ids[]" multiple id="pupil-select-{{ $class->id }}"
                                         class="pupil-multiselect w-full text-sm"
                                         @change="count = Array.from($event.target.selectedOptions).filter(o => o.value).length">
                                         @foreach ($class->pupils as $pupil)
-                                            <option value="{{ $pupil->id }}">
+                                            {{-- Private: default semua siswa terpilih (hadir); tutor bisa lepas yang absen --}}
+                                            <option value="{{ $pupil->id }}" @selected(!$isRegular)>
                                                 {{ $pupil->name }} ({{ $pupil->code }})
                                             </option>
                                         @endforeach
                                     </select>
-                                    @if($isRegular)
-                                    <p class="text-xs mt-1.5" x-show="estimasi !== null"
-                                        :class="count < minPupils ? 'text-amber-500' : 'text-green-600'">
-                                        <span x-text="label"></span>:
-                                        Rp <span x-text="estimasi?.toLocaleString('id-ID')"></span>
-                                        <template x-if="count < minPupils && count > 0">
-                                            <span class="text-gray-400"> (murid &lt; {{ $minPupils }})</span>
-                                        </template>
-                                    </p>
+                                    @if ($isRegular)
+                                        <p class="text-xs mt-1.5" x-show="estimasi !== null"
+                                            :class="count < minPupils ? 'text-amber-500' : 'text-green-600'">
+                                            <span x-text="label"></span>:
+                                            Rp <span x-text="estimasi?.toLocaleString('id-ID')"></span>
+                                            <template x-if="count < minPupils && count > 0">
+                                                <span class="text-gray-400"> (murid &lt; {{ $minPupils }})</span>
+                                            </template>
+                                        </p>
                                     @endif
                                 </div>
                             @endif
@@ -484,13 +500,12 @@
                             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                     </div>
 
-                    {{-- Siswa Hadir (hanya untuk Regular) --}}
-                    <div x-show="current.pupils && current.pupils.length > 0 && !current.isPrivate">
+                    {{-- Siswa Hadir (Regular & Private) --}}
+                    <div x-show="current.pupils && current.pupils.length > 0">
                         <label class="block text-xs font-medium text-gray-600 mb-1.5">Siswa Hadir</label>
                         <select name="pupil_ids[]" multiple class="pupil-multiselect-my-edit w-full text-sm">
                             <template x-for="p in (current.pupils || [])" :key="p.id">
-                                <option :value="p.id"
-                                    :selected="(current.presentPupilIds || []).includes(p.id)"
+                                <option :value="p.id" :selected="(current.presentPupilIds || []).includes(p.id)"
                                     x-text="p.name + ' (' + p.code + ')'">
                                 </option>
                             </template>
@@ -572,15 +587,17 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         function initPupilSelects() {
-            $('.pupil-multiselect').each(function () {
+            $('.pupil-multiselect').each(function() {
                 if (!$(this).hasClass('select2-hidden-accessible')) {
                     $(this).select2({
                         placeholder: '— Pilih siswa yang hadir —',
                         allowClear: true,
                         width: '100%',
                     });
-                    $(this).on('change', function () {
-                        this.dispatchEvent(new Event('change', { bubbles: true }));
+                    $(this).on('change', function() {
+                        this.dispatchEvent(new Event('change', {
+                            bubbles: true
+                        }));
                     });
                 }
             });
@@ -621,8 +638,13 @@
                             this.$nextTick(() => {
                                 const sel = this.$el.querySelector('.pupil-multiselect-my-edit');
                                 if (sel) {
-                                    if ($(sel).hasClass('select2-hidden-accessible')) $(sel).select2('destroy');
-                                    $(sel).select2({ placeholder: '— Pilih siswa yang hadir —', allowClear: true, width: '100%' });
+                                    if ($(sel).hasClass('select2-hidden-accessible')) $(sel)
+                                        .select2('destroy');
+                                    $(sel).select2({
+                                        placeholder: '— Pilih siswa yang hadir —',
+                                        allowClear: true,
+                                        width: '100%'
+                                    });
                                     const ids = (e.detail.presentPupilIds || []).map(String);
                                     $(sel).val(ids).trigger('change');
                                 }

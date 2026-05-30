@@ -85,10 +85,9 @@ class TutorPresenceController extends Controller
         $validated['status'] = 'presence';
 
         $presence->load('classSession.schoolClass.courseType');
-        $rate      = self::getRate($presence->classSession, $presence->tutor_id);
-        $isPrivate = strtolower($presence->classSession->schoolClass->courseType?->name ?? '') === 'private';
+        $rate = self::getRate($presence->classSession, $presence->tutor_id);
 
-        DB::transaction(function () use ($presence, $validated, $rate, $request, $isPrivate) {
+        DB::transaction(function () use ($presence, $validated, $rate, $request) {
             $sessionUpdate = ['material' => $validated['material'] ?? null];
             if (! empty($validated['session_date'])) {
                 $sessionUpdate['date'] = $validated['session_date'];
@@ -101,9 +100,8 @@ class TutorPresenceController extends Controller
                 $sessionUpdate['photo_file'] = preg_replace('/\.[^.]+$/', '.jpg', $path);
             }
 
-            $pupilIds = $isPrivate
-                ? \App\Models\Pupil::whereHas('classes', fn($q) => $q->where('classes.id', $presence->classSession->class_id))->where('active_status', true)->pluck('id')->toArray()
-                : ($validated['pupil_ids'] ?? null);
+            // Per-pupil attendance for both Regular and Private
+            $pupilIds = $validated['pupil_ids'] ?? null;
             $this->syncPupilPresences($presence->classSession, $pupilIds);
             $sessionUpdate['number_of_pupils'] = $presence->classSession->pupilPresences()->where('status', 'presence')->count();
 
@@ -121,7 +119,6 @@ class TutorPresenceController extends Controller
         });
 
         return back()->with('success', 'Presensi berhasil diperbarui.');
-
     }
 
     /**
@@ -222,16 +219,13 @@ class TutorPresenceController extends Controller
             $photoPath = preg_replace('/\.[^.]+$/', '.jpg', $photoPath);
         }
 
-        $schoolClass = \App\Models\SchoolClass::with('courseType')->find($validated['class_id']);
-        $isPrivate   = strtolower($schoolClass->courseType?->name ?? '') === 'private';
-
-        DB::transaction(function () use ($validated, $tutor, $photoPath, $isPrivate) {
+        DB::transaction(function () use ($validated, $tutor, $photoPath) {
             $allPupilIds = \App\Models\Pupil::whereHas('classes', fn($q) => $q->where('classes.id', $validated['class_id']))
                 ->where('active_status', true)
                 ->pluck('id');
 
-            // Private: auto-mark the single pupil present; Regular: use submitted pupil_ids
-            $pupilIds = $isPrivate ? $allPupilIds->toArray() : ($validated['pupil_ids'] ?? []);
+            // Per-pupil attendance for both Regular and Private (a private class may have several pupils)
+            $pupilIds = $validated['pupil_ids'] ?? [];
 
             $session = ClassSession::create([
                 'class_id'         => $validated['class_id'],
@@ -292,10 +286,9 @@ class TutorPresenceController extends Controller
         $validated['status'] = 'presence';
 
         $presence->load('classSession.schoolClass.courseType');
-        $rate      = self::getRate($presence->classSession, $tutor->id);
-        $isPrivate = strtolower($presence->classSession->schoolClass->courseType?->name ?? '') === 'private';
+        $rate = self::getRate($presence->classSession, $tutor->id);
 
-        DB::transaction(function () use ($presence, $validated, $rate, $request, $isPrivate) {
+        DB::transaction(function () use ($presence, $validated, $rate, $request) {
             $sessionUpdate = ['material' => $validated['material'] ?? null];
             if (! empty($validated['session_date'])) {
                 $sessionUpdate['date'] = $validated['session_date'];
@@ -308,9 +301,8 @@ class TutorPresenceController extends Controller
                 $sessionUpdate['photo_file'] = preg_replace('/\.[^.]+$/', '.jpg', $path);
             }
 
-            $pupilIds = $isPrivate
-                ? \App\Models\Pupil::whereHas('classes', fn($q) => $q->where('classes.id', $presence->classSession->class_id))->where('active_status', true)->pluck('id')->toArray()
-                : ($validated['pupil_ids'] ?? null);
+            // Per-pupil attendance for both Regular and Private
+            $pupilIds = $validated['pupil_ids'] ?? null;
             $this->syncPupilPresences($presence->classSession, $pupilIds);
             $sessionUpdate['number_of_pupils'] = $presence->classSession->pupilPresences()->where('status', 'presence')->count();
 

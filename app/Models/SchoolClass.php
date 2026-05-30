@@ -44,4 +44,15 @@ class SchoolClass extends Model
     {
         return $this->courseType?->name === 'private';
     }
+
+    /**
+     * Kata kunci pencarian: nama kelas + tingkatan + nama anak (untuk kelas privat).
+     * Sudah lowercase agar pencocokan di sisi klien langsung pakai.
+     */
+    public function getSearchKeyAttribute(): string
+    {
+        return strtolower(trim(
+            $this->name . ' ' . $this->grade?->name . ' ' . $this->pupils->pluck('name')->join(' ')
+        ));
+    }
 }
