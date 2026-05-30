@@ -2,7 +2,7 @@
 
 @section('title', 'Gaji Tutor')
 @section('header', 'Gaji Tutor')
-@section('subheader', 'Rate gaji per sesi berdasarkan kelas yang diampu')
+@section('subheader', 'Tarif dasar berdasarkan kelas yang diampu — Regular per anak hadir, Private flat per sesi')
 
 @section('content')
 
@@ -29,7 +29,7 @@
             </svg>
         </div>
         <div>
-            <p class="text-xs text-gray-500">Total Rate / Sesi</p>
+            <p class="text-xs text-gray-500">Total Tarif Dasar</p>
             <p class="text-xl font-bold text-gray-800">
                 Rp{{ number_format($tutors->sum('total_rate'), 0, ',', '.') }}
             </p>
@@ -87,7 +87,7 @@
                 <p class="text-sm font-bold text-green-600">
                     Rp{{ number_format($tutor->total_rate, 0, ',', '.') }}
                 </p>
-                <p class="text-xs text-gray-400">/ sesi</p>
+                <p class="text-xs text-gray-400">tarif dasar</p>
             </div>
         </div>
 
@@ -113,19 +113,21 @@
                             </div>
                         </div>
                         @php
+                            $isRegular    = strtolower($class->courseType?->name ?? '') === 'regular';
                             $pivotAmount  = (int) $class->pivot->amount;
                             $isDefault    = $pivotAmount === 0;
                             $defaultRate  = strtolower($class->courseType?->name ?? '') === 'private'
                                 ? (int) config('presence.tutor_rate_private')
                                 : (int) config('presence.tutor_rate_regular');
                             $displayRate  = $isDefault ? $defaultRate : $pivotAmount;
+                            $unitLabel    = $isRegular ? '/ anak' : '/ sesi';
                         @endphp
                         <div class="text-right flex-shrink-0">
                             <p class="text-sm font-semibold {{ $isDefault ? 'text-gray-400' : 'text-gray-800' }}">
                                 Rp{{ number_format($displayRate, 0, ',', '.') }}
                             </p>
                             <p class="text-xs {{ $isDefault ? 'text-gray-300' : 'text-gray-400' }}">
-                                {{ $isDefault ? 'default' : '/ sesi' }}
+                                {{ $unitLabel }}{{ $isDefault ? ' · default' : '' }}
                             </p>
                         </div>
                     </div>
@@ -134,7 +136,7 @@
 
                 {{-- Total row --}}
                 <div class="px-5 py-3 bg-gray-50 flex items-center justify-between border-t border-gray-100">
-                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total per sesi</p>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total tarif dasar</p>
                     <p class="text-sm font-bold text-green-600">
                         Rp{{ number_format($tutor->total_rate, 0, ',', '.') }}
                     </p>
