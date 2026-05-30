@@ -60,7 +60,7 @@
 @push('scripts')
 <script>
 function classForm() {
-    const privateTypes = @json($courseTypes->where('name', 'private')->pluck('id')->values());
+    const privateTypes = @json($courseTypes->filter(fn($t) => strtolower($t->name) === 'private')->pluck('id')->values());
     return {
         courseTypeId: '{{ old('course_type_id', $class->course_type_id) }}',
         get isPrivate() { return privateTypes.includes(parseInt(this.courseTypeId)); },
