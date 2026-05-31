@@ -93,8 +93,13 @@
     {{-- Class Cards --}}
     {{-- Mobile: 1 column stacked | md+: horizontal scroll row --}}
     <div class="flex flex-col gap-4 mb-8 md:flex-row md:overflow-x-auto md:pb-2">
-        @forelse($classes as $class)
-            @php $classSessions = $sessions->get($class->id, collect()); @endphp
+        @forelse($cards as $card)
+            @php
+                // Regular: 1 kartu/kelas ($pupil null). Private: 1 kartu/anak.
+                $class         = $card->class;
+                $pupil         = $card->pupil;
+                $classSessions = $card->sessions;
+            @endphp
             <div x-data="presenceCard({{ $class->id }})"
                 class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden w-full md:w-[400px] md:flex-shrink-0">
 
@@ -109,7 +114,8 @@
                 {{-- Card Header --}}
                 <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
                     <div class="min-w-0">
-                        <p class="font-semibold text-gray-800 text-sm leading-tight truncate">{{ $class->name }}</p>
+                        <p class="font-semibold text-gray-800 text-sm leading-tight truncate">
+                            {{ $pupil?->name ?? $class->name }}</p>
                         <div class="flex items-center gap-1.5 mt-1">
                             <span class="text-xs text-gray-400">{{ $class->grade->name }}</span>
                             <span class="w-1 h-1 rounded-full bg-gray-300 shrink-0"></span>
@@ -119,9 +125,8 @@
                                 {{ $class->courseType->name }}
                             </span>
                         </div>
-                        @if (!$isRegular && $class->pupils->isNotEmpty())
-                            <p class="text-xs text-gray-600 font-medium mt-1">
-                                {{ $class->pupils->pluck('name')->join(', ') }}</p>
+                        @if ($pupil)
+                            <p class="text-xs text-gray-600 font-medium mt-1">{{ $class->name }}</p>
                         @endif
                     </div>
                     <div class="text-right shrink-0">
@@ -162,7 +167,7 @@
                                         @if ($session->material)
                                             <p class="text-xs text-gray-400 mt-0.5">{{ $session->material }}</p>
                                         @endif
-                                        @if ($pupilTotal > 0)
+                                        @if (!$pupil && $pupilTotal > 0)
                                             <p class="text-xs text-gray-500 mt-0.5">
                                                 <span
                                                     class="font-medium text-green-700">{{ $pupilHadir }}</span>/{{ $pupilTotal }}
@@ -242,7 +247,8 @@
                         <div class="flex items-center justify-between mb-5">
                             <div>
                                 <h3 class="font-bold text-gray-800">Tambah Sesi</h3>
-                                <p class="text-xs text-gray-400 mt-0.5">{{ $class->name }}</p>
+                                <p class="text-xs text-gray-400 mt-0.5">
+                                    {{ $pupil ? $pupil->name . ' · ' . $class->name : $class->name }}</p>
                             </div>
                             <button @click="open = false" class="text-gray-400 hover:text-gray-600 transition">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -256,6 +262,9 @@
                             enctype="multipart/form-data">
                             @csrf
                             <input type="hidden" name="class_id" value="{{ $class->id }}">
+                            @if ($pupil)
+                                <input type="hidden" name="pupil_id" value="{{ $pupil->id }}">
+                            @endif
                             <input type="hidden" name="week" value="{{ $weekStart->format('Y-m-d') }}">
 
                             <div>
@@ -273,8 +282,8 @@
                                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                             </div>
 
-                            {{-- Siswa Hadir (Regular & Private) --}}
-                            @if ($class->pupils->isNotEmpty())
+                            {{-- Siswa Hadir (hanya Regular; Private otomatis 1 anak per kartu) --}}
+                            @if ($isRegular && $class->pupils->isNotEmpty())
                                 <div x-data="{
                                     count: 0,
                                     isRegular: {{ $isRegular ? 'true' : 'false' }},
@@ -298,10 +307,9 @@
                                     <select name="pupil_ids[]" multiple id="pupil-select-{{ $class->id }}"
                                         class="pupil-multiselect w-full text-sm"
                                         @change="count = Array.from($event.target.selectedOptions).filter(o => o.value).length">
-                                        @foreach ($class->pupils as $pupil)
-                                            {{-- Private: default semua siswa terpilih (hadir); tutor bisa lepas yang absen --}}
-                                            <option value="{{ $pupil->id }}" @selected(!$isRegular)>
-                                                {{ $pupil->name }} ({{ $pupil->code }})
+                                        @foreach ($class->pupils as $p)
+                                            <option value="{{ $p->id }}">
+                                                {{ $p->name }} ({{ $p->code }})
                                             </option>
                                         @endforeach
                                     </select>
@@ -496,8 +504,8 @@
                             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                     </div>
 
-                    {{-- Siswa Hadir (Regular & Private) --}}
-                    <div x-show="current.pupils && current.pupils.length > 0">
+                    {{-- Siswa Hadir (hanya Regular; Private = 1 anak per sesi) --}}
+                    <div x-show="!current.isPrivate && current.pupils && current.pupils.length > 0">
                         <label class="block text-xs font-medium text-gray-600 mb-1.5">Siswa Hadir</label>
                         <select name="pupil_ids[]" multiple class="pupil-multiselect-my-edit w-full text-sm">
                             <template x-for="p in (current.pupils || [])" :key="p.id">

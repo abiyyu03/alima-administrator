@@ -40,6 +40,7 @@ class TutorPresenceController extends Controller
             'schoolClass.grade',
             'schoolClass.courseType',
             'schoolClass.pupils' => fn($q) => $q->where('active_status', true)->orderBy('name'),
+            'pupil',
             'tutorPresences.tutor',
             'pupilPresences',
         ])
@@ -99,9 +100,10 @@ class TutorPresenceController extends Controller
         $validated['status'] = 'presence';
 
         $presence->load('classSession.schoolClass.courseType');
-        $rate = self::getRate($presence->classSession, $presence->tutor_id);
+        $rate      = self::getRate($presence->classSession, $presence->tutor_id);
+        $isPrivate = strtolower($presence->classSession->schoolClass->courseType?->name ?? '') === 'private';
 
-        DB::transaction(function () use ($presence, $validated, $rate, $request) {
+        DB::transaction(function () use ($presence, $validated, $rate, $request, $isPrivate) {
             $sessionUpdate = ['material' => $validated['material'] ?? null];
             if (! empty($validated['session_date'])) {
                 $sessionUpdate['date'] = $validated['session_date'];
@@ -114,10 +116,21 @@ class TutorPresenceController extends Controller
                 $sessionUpdate['photo_file'] = preg_replace('/\.[^.]+$/', '.jpg', $path);
             }
 
-            // Per-pupil attendance for both Regular and Private
-            $pupilIds = $validated['pupil_ids'] ?? null;
-            $this->syncPupilPresences($presence->classSession, $pupilIds);
-            $sessionUpdate['number_of_pupils'] = $presence->classSession->pupilPresences()->where('status', 'presence')->count();
+            if ($isPrivate) {
+                // Sesi private = satu anak; jaga presensi anak tsb tetap hadir
+                if ($presence->classSession->pupil_id) {
+                    \App\Models\PupilPresence::updateOrCreate(
+                        ['class_session_id' => $presence->classSession->id, 'pupil_id' => $presence->classSession->pupil_id],
+                        ['status' => 'presence']
+                    );
+                    $sessionUpdate['number_of_pupils'] = 1;
+                }
+            } else {
+                // Regular: presensi per anak dari pilihan
+                $pupilIds = $validated['pupil_ids'] ?? null;
+                $this->syncPupilPresences($presence->classSession, $pupilIds);
+                $sessionUpdate['number_of_pupils'] = $presence->classSession->pupilPresences()->where('status', 'presence')->count();
+            }
 
             $presence->classSession->update($sessionUpdate);
 
@@ -218,10 +231,31 @@ class TutorPresenceController extends Controller
             'earned' => $presences->sum(fn($p) => $p->earned),
         ]);
 
+        // Bangun kartu: Regular = 1 kartu per kelas; Private = 1 kartu per anak
+        $cards = collect();
+        foreach ($classes as $class) {
+            $classSessions = $sessions->get($class->id, collect());
+
+            if ($class->is_regular) {
+                $cards->push((object) [
+                    'class'    => $class,
+                    'pupil'    => null,
+                    'sessions' => $classSessions,
+                ]);
+            } else {
+                foreach ($class->pupils as $pupil) {
+                    $cards->push((object) [
+                        'class'    => $class,
+                        'pupil'    => $pupil,
+                        'sessions' => $classSessions->where('pupil_id', $pupil->id)->values(),
+                    ]);
+                }
+            }
+        }
+
         return view('tutor-presences.my', compact(
             'tutor',
-            'classes',
-            'sessions',
+            'cards',
             'weekStart',
             'weekEnd',
             'statsWeek',
@@ -246,6 +280,7 @@ class TutorPresenceController extends Controller
             'material'    => 'nullable|string|max:500',
             'note'        => 'nullable|string|max:500',
             'week'        => 'nullable|date',
+            'pupil_id'    => 'nullable|exists:pupils,id',
             'pupil_ids'   => 'nullable|array',
             'pupil_ids.*' => 'exists:pupils,id',
             'photo'       => 'nullable|image|max:5120',
@@ -256,6 +291,18 @@ class TutorPresenceController extends Controller
         $ownsClass = $tutor->classes()->where('classes.id', $validated['class_id'])->exists();
         if (! $ownsClass) abort(403, 'Kamu tidak mengampu kelas ini.');
 
+        $schoolClass = \App\Models\SchoolClass::with('courseType')->find($validated['class_id']);
+        $isPrivate   = strtolower($schoolClass->courseType?->name ?? '') === 'private';
+
+        // Private: sesi milik satu anak — wajib pupil_id & anak harus terdaftar di kelas ini
+        if ($isPrivate) {
+            $request->validate(['pupil_id' => 'required|exists:pupils,id']);
+            $enrolled = \App\Models\Pupil::where('id', $validated['pupil_id'])
+                ->whereHas('classes', fn($q) => $q->where('classes.id', $validated['class_id']))
+                ->exists();
+            if (! $enrolled) abort(422, 'Siswa tidak terdaftar di kelas ini.');
+        }
+
         $photoPath = null;
         if ($request->hasFile('photo')) {
             $photoPath = $request->file('photo')->store('session-photos', 'public');
@@ -263,28 +310,48 @@ class TutorPresenceController extends Controller
             $photoPath = preg_replace('/\.[^.]+$/', '.jpg', $photoPath);
         }
 
-        DB::transaction(function () use ($validated, $tutor, $photoPath) {
-            $allPupilIds = \App\Models\Pupil::whereHas('classes', fn($q) => $q->where('classes.id', $validated['class_id']))
-                ->where('active_status', true)
-                ->pluck('id');
+        DB::transaction(function () use ($validated, $tutor, $photoPath, $isPrivate) {
+            if ($isPrivate) {
+                // Satu sesi = satu anak; anak otomatis hadir
+                $pupilId = (int) $validated['pupil_id'];
 
-            // Per-pupil attendance for both Regular and Private (a private class may have several pupils)
-            $pupilIds = $validated['pupil_ids'] ?? [];
+                $session = ClassSession::create([
+                    'class_id'         => $validated['class_id'],
+                    'pupil_id'         => $pupilId,
+                    'date'             => $validated['date'],
+                    'material'         => $validated['material'] ?? null,
+                    'number_of_pupils' => 1,
+                    'photo_file'       => $photoPath,
+                ]);
 
-            $session = ClassSession::create([
-                'class_id'         => $validated['class_id'],
-                'date'             => $validated['date'],
-                'material'         => $validated['material'] ?? null,
-                'number_of_pupils' => count($pupilIds),
-                'photo_file'       => $photoPath,
-            ]);
-
-            foreach ($allPupilIds as $pid) {
                 \App\Models\PupilPresence::create([
                     'class_session_id' => $session->id,
-                    'pupil_id'         => $pid,
-                    'status'           => in_array($pid, $pupilIds) ? 'presence' : 'absent',
+                    'pupil_id'         => $pupilId,
+                    'status'           => 'presence',
                 ]);
+            } else {
+                $allPupilIds = \App\Models\Pupil::whereHas('classes', fn($q) => $q->where('classes.id', $validated['class_id']))
+                    ->where('active_status', true)
+                    ->pluck('id');
+
+                // Regular: presensi per anak dari pilihan tutor
+                $pupilIds = $validated['pupil_ids'] ?? [];
+
+                $session = ClassSession::create([
+                    'class_id'         => $validated['class_id'],
+                    'date'             => $validated['date'],
+                    'material'         => $validated['material'] ?? null,
+                    'number_of_pupils' => count($pupilIds),
+                    'photo_file'       => $photoPath,
+                ]);
+
+                foreach ($allPupilIds as $pid) {
+                    \App\Models\PupilPresence::create([
+                        'class_session_id' => $session->id,
+                        'pupil_id'         => $pid,
+                        'status'           => in_array($pid, $pupilIds) ? 'presence' : 'absent',
+                    ]);
+                }
             }
 
             $session->load('schoolClass.courseType');
@@ -330,9 +397,10 @@ class TutorPresenceController extends Controller
         $validated['status'] = 'presence';
 
         $presence->load('classSession.schoolClass.courseType');
-        $rate = self::getRate($presence->classSession, $tutor->id);
+        $rate      = self::getRate($presence->classSession, $tutor->id);
+        $isPrivate = strtolower($presence->classSession->schoolClass->courseType?->name ?? '') === 'private';
 
-        DB::transaction(function () use ($presence, $validated, $rate, $request) {
+        DB::transaction(function () use ($presence, $validated, $rate, $request, $isPrivate) {
             $sessionUpdate = ['material' => $validated['material'] ?? null];
             if (! empty($validated['session_date'])) {
                 $sessionUpdate['date'] = $validated['session_date'];
@@ -345,10 +413,21 @@ class TutorPresenceController extends Controller
                 $sessionUpdate['photo_file'] = preg_replace('/\.[^.]+$/', '.jpg', $path);
             }
 
-            // Per-pupil attendance for both Regular and Private
-            $pupilIds = $validated['pupil_ids'] ?? null;
-            $this->syncPupilPresences($presence->classSession, $pupilIds);
-            $sessionUpdate['number_of_pupils'] = $presence->classSession->pupilPresences()->where('status', 'presence')->count();
+            if ($isPrivate) {
+                // Sesi private = satu anak; jaga presensi anak tsb tetap hadir
+                if ($presence->classSession->pupil_id) {
+                    \App\Models\PupilPresence::updateOrCreate(
+                        ['class_session_id' => $presence->classSession->id, 'pupil_id' => $presence->classSession->pupil_id],
+                        ['status' => 'presence']
+                    );
+                    $sessionUpdate['number_of_pupils'] = 1;
+                }
+            } else {
+                // Regular: presensi per anak dari pilihan
+                $pupilIds = $validated['pupil_ids'] ?? null;
+                $this->syncPupilPresences($presence->classSession, $pupilIds);
+                $sessionUpdate['number_of_pupils'] = $presence->classSession->pupilPresences()->where('status', 'presence')->count();
+            }
 
             $presence->classSession->update($sessionUpdate);
 

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ClassSession extends Model
 {
-    protected $fillable = ['number_of_pupils', 'date', 'class_id', 'material', 'photo_file'];
+    protected $fillable = ['number_of_pupils', 'date', 'class_id', 'pupil_id', 'material', 'photo_file'];
 
     protected function casts(): array
     {
@@ -18,6 +18,11 @@ class ClassSession extends Model
     public function schoolClass()
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
+    }
+
+    public function pupil()
+    {
+        return $this->belongsTo(Pupil::class);
     }
 
     public function tutorPresences()

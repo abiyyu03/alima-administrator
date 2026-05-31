@@ -188,6 +188,9 @@
                                         <td class="px-4 py-3">
                                             <p class="font-medium text-gray-800">{{ $session->schoolClass->name }}</p>
                                             <p class="text-xs text-gray-400">{{ $session->schoolClass->grade->name }}</p>
+                                            @if ($session->pupil)
+                                                <p class="text-xs text-purple-600 font-medium">{{ $session->pupil->name }}</p>
+                                            @endif
                                         </td>
                                         <td colspan="5" class="px-4 py-3 text-gray-400 italic text-xs">Belum ada presensi</td>
                                     </tr>
@@ -214,13 +217,18 @@
                                             <td class="px-4 py-3">
                                                 <p class="font-medium text-gray-800">{{ $session->schoolClass->name }}</p>
                                                 <p class="text-xs text-gray-400">{{ $session->schoolClass->grade->name }}</p>
-                                                <a href="{{ route('class-sessions.pupil-presences.index', $session) }}"
-                                                    class="inline-flex items-center gap-1 mt-1 text-xs text-blue-600 hover:underline">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                    </svg>
-                                                    {{ $pupilHadir }} siswa hadir
-                                                </a>
+                                                @if ($session->pupil)
+                                                    <p class="text-xs text-purple-600 font-medium">{{ $session->pupil->name }}</p>
+                                                @endif
+                                                @if ($session->is_regular)
+                                                    <a href="{{ route('class-sessions.pupil-presences.index', $session) }}"
+                                                        class="inline-flex items-center gap-1 mt-1 text-xs text-blue-600 hover:underline">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                        </svg>
+                                                        {{ $pupilHadir }} siswa hadir
+                                                    </a>
+                                                @endif
                                             </td>
                                             {{-- Tutor --}}
                                             <td class="px-4 py-3">
@@ -271,7 +279,7 @@
                                                         note: '{{ addslashes($p->note ?? '') }}',
                                                         material: '{{ addslashes($session->material ?? '') }}',
                                                         photoUrl: '{{ $session->photo_file ? Storage::url($session->photo_file) : '' }}',
-                                                        pupils: @json($session->schoolClass->pupils->map(fn($pu) => ['id' => $pu->id, 'name' => $pu->name, 'code' => $pu->code])),
+                                                        pupils: @json($session->is_regular ? $session->schoolClass->pupils->map(fn($pu) => ['id' => $pu->id, 'name' => $pu->name, 'code' => $pu->code]) : []),
                                                         presentPupilIds: @json($session->present_pupil_ids),
                                                     })"
                                                     class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs text-gray-600 hover:bg-gray-50 transition">
