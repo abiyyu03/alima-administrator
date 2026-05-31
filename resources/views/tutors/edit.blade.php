@@ -82,6 +82,13 @@
                                                 'extra_fees.' . $class->id,
                                                 $assignedExtraFees->get($class->id, 0),
                                             );
+                                            // Anak private mana yang dipegang: pakai old → assigned → default semua
+                                            $pupilChecked = function ($pupilId) use ($isChecked, $assignedPupilIds) {
+                                                if (old('pupil_ids') !== null) {
+                                                    return in_array($pupilId, old('pupil_ids', []));
+                                                }
+                                                return $isChecked ? $assignedPupilIds->contains($pupilId) : true;
+                                            };
                                         @endphp
                                         <div x-data="{ checked: {{ $isChecked ? 'true' : 'false' }} }"
                                             x-show="@js($class->search_key).includes(search.toLowerCase())" x-cloak
@@ -114,6 +121,34 @@
                                                 </div>
                                             </label>
                                             <div x-show="checked" x-transition class="mt-2.5 pl-6 space-y-2">
+                                                @if (strtolower($typeName) === 'private' && $class->pupils->isNotEmpty())
+                                                    <div>
+                                                        <p class="text-xs text-gray-400 mb-1.5">Anak yang dipegang &amp; extra rate / sesi</p>
+                                                        <div class="space-y-2">
+                                                            @foreach ($class->pupils as $p)
+                                                                @php
+                                                                    $pExtra = old('pupil_extra.' . $p->id, $assignedPupilExtras->get($p->id, 0));
+                                                                @endphp
+                                                                <div x-data="{ on: {{ $pupilChecked($p->id) ? 'true' : 'false' }} }"
+                                                                    class="flex items-center gap-2">
+                                                                    <label class="flex items-center gap-2 cursor-pointer flex-1 min-w-0">
+                                                                        <input type="checkbox" name="pupil_ids[]"
+                                                                            value="{{ $p->id }}" x-model="on"
+                                                                            @checked($pupilChecked($p->id))
+                                                                            class="rounded border-gray-300 text-green-600 focus:ring-green-400">
+                                                                        <span class="text-xs text-gray-700 truncate">{{ $p->name }}</span>
+                                                                    </label>
+                                                                    <div class="relative w-24 shrink-0" x-show="on" x-transition x-cloak>
+                                                                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-medium">+Rp</span>
+                                                                        <input type="number" name="pupil_extra[{{ $p->id }}]"
+                                                                            value="{{ $pExtra }}" min="0" step="500" placeholder="0"
+                                                                            class="w-full rounded-lg border border-gray-300 pl-8 pr-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-green-400">
+                                                                    </div>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
+                                                @endif
                                                 <div>
                                                     <p class="text-xs text-gray-400 mb-1">Gaji per sesi</p>
                                                     <div class="relative">
@@ -125,17 +160,19 @@
                                                             class="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    <p class="text-xs text-gray-400 mb-1">Biaya tambahan (jarak, dll)</p>
-                                                    <div class="relative">
-                                                        <span
-                                                            class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">Rp</span>
-                                                        <input type="number" name="extra_fees[{{ $class->id }}]"
-                                                            value="{{ $currentExtraFee }}" min="0" step="500"
-                                                            placeholder="0"
-                                                            class="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                                                @if (strtolower($typeName) !== 'private')
+                                                    <div>
+                                                        <p class="text-xs text-gray-400 mb-1">Biaya tambahan (jarak, dll)</p>
+                                                        <div class="relative">
+                                                            <span
+                                                                class="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">Rp</span>
+                                                            <input type="number" name="extra_fees[{{ $class->id }}]"
+                                                                value="{{ $currentExtraFee }}" min="0" step="500"
+                                                                placeholder="0"
+                                                                class="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                @endif
                                             </div>
                                         </div>
                                     @endforeach

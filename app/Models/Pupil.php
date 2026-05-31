@@ -18,8 +18,7 @@ class Pupil extends Model
 
     public function classes()
     {
-        return $this->belongsToMany(SchoolClass::class, 'class_pupil', 'pupil_id', 'class_id')
-            ->withPivot('rate');
+        return $this->belongsToMany(SchoolClass::class, 'class_pupil', 'pupil_id', 'class_id');
     }
 
     public function presences()

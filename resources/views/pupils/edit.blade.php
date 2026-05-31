@@ -54,7 +54,7 @@
 
             {{-- Pendaftaran Kelas --}}
             <x-card title="Pendaftaran Kelas">
-                <p class="text-xs text-gray-400 mb-3">Pilih satu atau lebih kelas. Untuk kelas Private, isi rate per sesi.</p>
+                <p class="text-xs text-gray-400 mb-3">Pilih satu atau lebih kelas.</p>
 
                 @error('class_ids')
                     <div class="mb-3 text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{{ $message }}</div>

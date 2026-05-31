@@ -99,6 +99,7 @@
                 $class         = $card->class;
                 $pupil         = $card->pupil;
                 $classSessions = $card->sessions;
+                $displayRate   = $card->rate; // private: sudah termasuk extra per-anak
             @endphp
             <div x-data="presenceCard({{ $class->id }})"
                 class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden w-full md:w-[400px] md:flex-shrink-0">
@@ -131,7 +132,7 @@
                     </div>
                     <div class="text-right shrink-0">
                         <p class="text-xs text-gray-400">{{ $isRegular ? 'Rate / siswa' : 'Rate / sesi' }}</p>
-                        <p class="text-sm font-bold text-green-700">Rp {{ number_format($effectiveRate, 0, ',', '.') }}</p>
+                        <p class="text-sm font-bold text-green-700">Rp {{ number_format($displayRate, 0, ',', '.') }}</p>
                         @if ($isRegular)
                             <p class="text-xs text-gray-400 mt-0.5">&lt; {{ $minPupils }} siswa → Rp
                                 {{ number_format($minIncentive + $extraFee, 0, ',', '.') }}</p>

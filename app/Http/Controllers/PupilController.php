@@ -69,9 +69,8 @@ class PupilController extends Controller
     {
         $classes     = SchoolClass::with(['grade', 'courseType'])->orderBy('name')->get();
         $selectedIds = $pupil->classes()->pluck('classes.id')->toArray();
-        $pivotRates  = $pupil->classes()->get()->pluck('pivot.rate', 'id')->toArray();
 
-        return view('pupils.edit', compact('pupil', 'classes', 'selectedIds', 'pivotRates'));
+        return view('pupils.edit', compact('pupil', 'classes', 'selectedIds'));
     }
 
     public function update(Request $request, Pupil $pupil)

@@ -27,6 +27,16 @@ class Tutor extends Model
         return $this->hasMany(TutorClass::class);
     }
 
+    /**
+     * Anak-anak yang dipegang tutor pada kelas private (subset dari anggota kelas).
+     */
+    public function pupils()
+    {
+        return $this->belongsToMany(Pupil::class, 'tutor_pupil')
+                    ->withPivot('extra_fee')
+                    ->withTimestamps();
+    }
+
     public function presences()
     {
         return $this->hasMany(TutorPresence::class);

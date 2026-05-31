@@ -22,12 +22,16 @@ class TutorController extends Controller
     public function create()
     {
         $classes = SchoolClass::with(['grade', 'courseType', 'pupils'])->orderBy('name')->get();
+        $assignedPupilIds    = collect();
+        $assignedPupilExtras = collect();
 
-        return view('tutors.create', compact('classes'));
+        return view('tutors.create', compact('classes', 'assignedPupilIds', 'assignedPupilExtras'));
     }
 
     public function store(Request $request)
     {
+        $this->normalizeCurrencyInputs($request);
+
         $request->validate([
             'name'           => 'required|string|max:150',
             'telp'           => 'nullable|string|max:20',
@@ -41,6 +45,10 @@ class TutorController extends Controller
             'amounts.*'      => 'nullable|numeric|min:0',
             'extra_fees'     => 'nullable|array',
             'extra_fees.*'   => 'nullable|integer|min:0',
+            'pupil_ids'      => 'nullable|array',
+            'pupil_ids.*'    => 'exists:pupils,id',
+            'pupil_extra'    => 'nullable|array',
+            'pupil_extra.*'  => 'nullable|integer|min:0',
         ]);
 
         DB::transaction(function () use ($request) {
@@ -57,6 +65,7 @@ class TutorController extends Controller
             ]);
 
             $this->syncClassesWithAmounts($tutor, $request);
+            $this->syncTutorPupils($tutor, $request);
         });
 
         return redirect()->route('tutors.index')->with('success', 'Tutor dan akun login berhasil dibuat.');
@@ -64,17 +73,21 @@ class TutorController extends Controller
 
     public function edit(Tutor $tutor)
     {
-        $tutor->load('classes.grade', 'classes.courseType');
+        $tutor->load('classes.grade', 'classes.courseType', 'pupils');
         $classes = SchoolClass::with(['grade', 'courseType', 'pupils'])->orderBy('name')->get();
 
-        $assignedAmounts   = $tutor->classes->pluck('pivot.amount', 'id');
-        $assignedExtraFees = $tutor->classes->pluck('pivot.extra_fee', 'id');
+        $assignedAmounts     = $tutor->classes->pluck('pivot.amount', 'id');
+        $assignedExtraFees   = $tutor->classes->pluck('pivot.extra_fee', 'id');
+        $assignedPupilIds    = $tutor->pupils->pluck('id');
+        $assignedPupilExtras = $tutor->pupils->pluck('pivot.extra_fee', 'id');
 
-        return view('tutors.edit', compact('tutor', 'classes', 'assignedAmounts', 'assignedExtraFees'));
+        return view('tutors.edit', compact('tutor', 'classes', 'assignedAmounts', 'assignedExtraFees', 'assignedPupilIds', 'assignedPupilExtras'));
     }
 
     public function update(Request $request, Tutor $tutor)
     {
+        $this->normalizeCurrencyInputs($request);
+
         $request->validate([
             'name'           => 'required|string|max:150',
             'telp'           => 'nullable|string|max:20',
@@ -86,11 +99,16 @@ class TutorController extends Controller
             'amounts.*'      => 'nullable|numeric|min:0',
             'extra_fees'     => 'nullable|array',
             'extra_fees.*'   => 'nullable|integer|min:0',
+            'pupil_ids'      => 'nullable|array',
+            'pupil_ids.*'    => 'exists:pupils,id',
+            'pupil_extra'    => 'nullable|array',
+            'pupil_extra.*'  => 'nullable|integer|min:0',
         ]);
 
         $tutor->update($request->only('name', 'telp', 'dob', 'domicille'));
 
         $this->syncClassesWithAmounts($tutor, $request);
+        $this->syncTutorPupils($tutor, $request);
 
         return redirect()->route('tutors.index')->with('success', 'Data tutor berhasil diperbarui.');
     }
@@ -108,6 +126,25 @@ class TutorController extends Controller
     }
 
     // ---------------------------------------------------------------
+
+    /**
+     * Rapikan input nominal rupiah (amounts/extra_fees/pupil_extra): buang
+     * pemisah ribuan & karakter non-digit, kosong → null. Mencegah error
+     * validasi saat user mengetik "10.000".
+     */
+    private function normalizeCurrencyInputs(Request $request): void
+    {
+        foreach (['amounts', 'extra_fees', 'pupil_extra'] as $key) {
+            if (! is_array($request->input($key))) continue;
+
+            $clean = collect($request->input($key))->map(function ($v) {
+                if ($v === null || $v === '') return null;
+                return (int) preg_replace('/\D/', '', (string) $v);
+            })->all();
+
+            $request->merge([$key => $clean]);
+        }
+    }
 
     private function syncClassesWithAmounts(Tutor $tutor, Request $request): void
     {
@@ -137,5 +174,31 @@ class TutorController extends Controller
         })->toArray();
 
         $tutor->classes()->sync($syncData);
+    }
+
+    /**
+     * Simpan anak-anak private yang dipegang tutor. Hanya anak yang benar-benar
+     * anggota salah satu kelas (private) yang dicentang yang disimpan.
+     */
+    private function syncTutorPupils(Tutor $tutor, Request $request): void
+    {
+        $classIds = $request->input('class_ids', []);
+        $pupilIds = $request->input('pupil_ids', []);
+        $extras   = $request->input('pupil_extra', []);
+
+        $validPupilIds = SchoolClass::query()
+            ->whereIn('id', $classIds)
+            ->with('pupils:id')
+            ->get()
+            ->pluck('pupils.*.id')
+            ->flatten()
+            ->intersect($pupilIds);
+
+        // Simpan beserta extra rate per anak
+        $syncData = $validPupilIds->mapWithKeys(fn($pid) => [
+            $pid => ['extra_fee' => (int) ($extras[$pid] ?? 0)],
+        ])->all();
+
+        $tutor->pupils()->sync($syncData);
     }
 }

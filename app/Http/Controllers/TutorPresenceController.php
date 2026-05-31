@@ -231,7 +231,12 @@ class TutorPresenceController extends Controller
             'earned' => $presences->sum(fn($p) => $p->earned),
         ]);
 
-        // Bangun kartu: Regular = 1 kartu per kelas; Private = 1 kartu per anak
+        // Anak private yang dipegang tutor ini, beserta extra rate per anak
+        $assignedPupils   = $tutor->pupils()->get();
+        $assignedPupilIds = $assignedPupils->pluck('id');
+        $pupilExtraById   = $assignedPupils->pluck('pivot.extra_fee', 'id');
+
+        // Bangun kartu: Regular = 1 kartu per kelas; Private = 1 kartu per anak yang dipegang
         $cards = collect();
         foreach ($classes as $class) {
             $classSessions = $sessions->get($class->id, collect());
@@ -240,13 +245,18 @@ class TutorPresenceController extends Controller
                 $cards->push((object) [
                     'class'    => $class,
                     'pupil'    => null,
+                    'rate'     => $class->effective_rate,
                     'sessions' => $classSessions,
                 ]);
             } else {
                 foreach ($class->pupils as $pupil) {
+                    if (! $assignedPupilIds->contains($pupil->id)) continue;
+
                     $cards->push((object) [
                         'class'    => $class,
                         'pupil'    => $pupil,
+                        // Private: gaji dasar kelas + extra rate khusus anak ini
+                        'rate'     => $class->effective_rate + (int) ($pupilExtraById[$pupil->id] ?? 0),
                         'sessions' => $classSessions->where('pupil_id', $pupil->id)->values(),
                     ]);
                 }
@@ -294,13 +304,17 @@ class TutorPresenceController extends Controller
         $schoolClass = \App\Models\SchoolClass::with('courseType')->find($validated['class_id']);
         $isPrivate   = strtolower($schoolClass->courseType?->name ?? '') === 'private';
 
-        // Private: sesi milik satu anak — wajib pupil_id & anak harus terdaftar di kelas ini
+        // Private: sesi milik satu anak — wajib pupil_id, anak terdaftar di kelas & dipegang tutor ini
         if ($isPrivate) {
             $request->validate(['pupil_id' => 'required|exists:pupils,id']);
             $enrolled = \App\Models\Pupil::where('id', $validated['pupil_id'])
                 ->whereHas('classes', fn($q) => $q->where('classes.id', $validated['class_id']))
                 ->exists();
             if (! $enrolled) abort(422, 'Siswa tidak terdaftar di kelas ini.');
+
+            if (! $tutor->pupils()->where('pupils.id', $validated['pupil_id'])->exists()) {
+                abort(403, 'Kamu tidak memegang siswa ini.');
+            }
         }
 
         $photoPath = null;
@@ -465,14 +479,23 @@ class TutorPresenceController extends Controller
         $courseTypeName = $session->schoolClass->courseType?->name ?? '';
 
         // Use pivot amount if explicitly set, otherwise fall back to config default
+        $isPrivate = strtolower($courseTypeName) === 'private';
         $base = (float) ($pivot?->amount ?? 0);
         if ($base === 0.0) {
-            $base = strtolower($courseTypeName) === 'private'
+            $base = $isPrivate
                 ? (float) config('presence.tutor_rate_private')
                 : (float) config('presence.tutor_rate_regular');
         }
 
-        $extra = (float) ($pivot?->extra_fee ?? 0);
+        // Private: extra per-anak (tutor_pupil). Regular: extra per-kelas (tutor_classes).
+        if ($isPrivate && $session->pupil_id) {
+            $extra = (float) (DB::table('tutor_pupil')
+                ->where('tutor_id', $tutorId)
+                ->where('pupil_id', $session->pupil_id)
+                ->value('extra_fee') ?? 0);
+        } else {
+            $extra = (float) ($pivot?->extra_fee ?? 0);
+        }
 
         return $base + $extra;
     }
