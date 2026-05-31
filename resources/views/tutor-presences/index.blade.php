@@ -172,10 +172,11 @@
                         <tbody class="divide-y divide-gray-100">
                             @foreach ($sessions as $session)
                                 @php
-                                    $isRegular    = strtolower($session->schoolClass->courseType?->name ?? '') === 'regular';
-                                    $pupilHadir   = $session->pupilPresences->where('status', 'presence')->count();
-                                    $minPupils    = (int) config('presence.regular_min_pupils');
-                                    $isBelowMin   = $isRegular && $pupilHadir < $minPupils;
+                                    // Sudah dihitung di controller (TutorPresenceController::index)
+                                    $isRegular  = $session->is_regular;
+                                    $pupilHadir = $session->pupil_hadir;
+                                    $minPupils  = $session->min_pupils;
+                                    $isBelowMin = $session->is_below_min;
                                 @endphp
                                 @if ($session->tutorPresences->isEmpty())
                                     <tr class="hover:bg-gray-50"
@@ -271,7 +272,7 @@
                                                         material: '{{ addslashes($session->material ?? '') }}',
                                                         photoUrl: '{{ $session->photo_file ? Storage::url($session->photo_file) : '' }}',
                                                         pupils: @json($session->schoolClass->pupils->map(fn($pu) => ['id' => $pu->id, 'name' => $pu->name, 'code' => $pu->code])),
-                                                        presentPupilIds: @json($session->pupilPresences->where('status','presence')->pluck('pupil_id')),
+                                                        presentPupilIds: @json($session->present_pupil_ids),
                                                     })"
                                                     class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs text-gray-600 hover:bg-gray-50 transition">
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

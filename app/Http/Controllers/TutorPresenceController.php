@@ -57,6 +57,20 @@ class TutorPresenceController extends Controller
             });
         }
 
+        // Precompute per-sesi (config dibaca sekali, bukan per baris di view)
+        $minPupils = (int) config('presence.regular_min_pupils');
+        $sessions->each(function ($session) use ($minPupils) {
+            $isRegular  = strtolower($session->schoolClass->courseType?->name ?? '') === 'regular';
+            $present    = $session->pupilPresences->where('status', 'presence');
+            $pupilHadir = $present->count();
+
+            $session->is_regular        = $isRegular;
+            $session->pupil_hadir       = $pupilHadir;
+            $session->min_pupils        = $minPupils;
+            $session->is_below_min      = $isRegular && $pupilHadir < $minPupils;
+            $session->present_pupil_ids = $present->pluck('pupil_id')->values();
+        });
+
         return view('tutor-presences.index', compact(
             'tutors',
             'sessions',
@@ -140,11 +154,27 @@ class TutorPresenceController extends Controller
 
         $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
 
+        // Rate config dibaca sekali di sini, bukan berulang di dalam loop view
+        $minPupils    = (int) config('presence.regular_min_pupils');
+        $minIncentive = (int) config('presence.regular_min_incentive');
+        $ratePrivate  = (int) config('presence.tutor_rate_private');
+        $rateRegular  = (int) config('presence.tutor_rate_regular');
+
         $classes = $tutor->classes()->with([
             'grade',
             'courseType',
             'pupils' => fn($q) => $q->where('active_status', true)->orderBy('name'),
-        ])->get();
+        ])->get()
+            ->each(function ($class) use ($minPupils, $minIncentive, $ratePrivate, $rateRegular) {
+                $isRegular = strtolower($class->courseType->name) === 'regular';
+                $pivotAmt  = (int) ($class->pivot->amount ?? 0);
+
+                $class->is_regular     = $isRegular;
+                $class->extra_fee      = (int) ($class->pivot->extra_fee ?? 0);
+                $class->effective_rate = $pivotAmt > 0 ? $pivotAmt : ($isRegular ? $rateRegular : $ratePrivate);
+                $class->min_pupils     = $minPupils;
+                $class->min_incentive  = $minIncentive;
+            });
 
         $classIds = $classes->pluck('id');
         $sessions = ClassSession::with([
@@ -156,6 +186,12 @@ class TutorPresenceController extends Controller
             ->whereBetween('date', [$weekStart, $weekEnd])
             ->orderBy('date')
             ->get()
+            ->each(function ($session) {
+                $present = $session->pupilPresences->where('status', 'presence');
+                $session->pupil_hadir       = $present->count();
+                $session->pupil_total       = $session->pupilPresences->count();
+                $session->present_pupil_ids = $present->pluck('pupil_id')->values();
+            })
             ->groupBy('class_id');
 
         $weekPresences = TutorPresence::where('tutor_id', $tutor->id)
@@ -175,6 +211,13 @@ class TutorPresenceController extends Controller
             ->get()
             ->groupBy(fn($p) => Carbon::parse($p->classSession->date)->startOfWeek(Carbon::MONDAY)->format('Y-m-d'));
 
+        // Ringkasan per minggu dihitung sekali, supaya view tidak agregasi ulang
+        $historySummary = $history->map(fn($presences) => [
+            'count'  => $presences->count(),
+            'hadir'  => $presences->where('status', 'presence')->count(),
+            'earned' => $presences->sum(fn($p) => $p->earned),
+        ]);
+
         return view('tutor-presences.my', compact(
             'tutor',
             'classes',
@@ -182,7 +225,8 @@ class TutorPresenceController extends Controller
             'weekStart',
             'weekEnd',
             'statsWeek',
-            'history'
+            'history',
+            'historySummary'
         ));
     }
 

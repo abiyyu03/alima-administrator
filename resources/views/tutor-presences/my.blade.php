@@ -99,17 +99,12 @@
                 class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden w-full md:w-[400px] md:flex-shrink-0">
 
                 @php
-                    $pivotAmt = (int) $class->pivot->amount;
-                    $isRegular = strtolower($class->courseType->name) === 'regular';
-                    $effectiveRate =
-                        $pivotAmt > 0
-                            ? $pivotAmt
-                            : (strtolower($class->courseType->name) === 'private'
-                                ? (int) config('presence.tutor_rate_private')
-                                : (int) config('presence.tutor_rate_regular'));
-                    $minPupils = (int) config('presence.regular_min_pupils');
-                    $minIncentive = (int) config('presence.regular_min_incentive');
-                    $extraFee = (int) ($class->pivot->extra_fee ?? 0);
+                    // Sudah dihitung di controller (TutorPresenceController::myPresences)
+                    $isRegular     = $class->is_regular;
+                    $effectiveRate = $class->effective_rate;
+                    $minPupils     = $class->min_pupils;
+                    $minIncentive  = $class->min_incentive;
+                    $extraFee      = $class->extra_fee;
                 @endphp
                 {{-- Card Header --}}
                 <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
@@ -147,8 +142,8 @@
                         @foreach ($classSessions as $session)
                             @php
                                 $sp = $session->tutorPresences->first();
-                                $pupilHadir = $session->pupilPresences->where('status', 'presence')->count();
-                                $pupilTotal = $session->pupilPresences->count();
+                                $pupilHadir = $session->pupil_hadir;
+                                $pupilTotal = $session->pupil_total;
                             @endphp
                             <div class="rounded-xl bg-gray-50 border border-gray-100 overflow-hidden">
 
@@ -211,7 +206,7 @@
                                 photoUrl: '{{ $session->photo_file ? Storage::url($session->photo_file) : '' }}',
                                 isPrivate: {{ $isRegular ? 'false' : 'true' }},
                                 pupils: {{ Js::from($class->pupils->map(fn($pu) => ['id' => $pu->id, 'name' => $pu->name, 'code' => $pu->code])) }},
-                                presentPupilIds: {{ Js::from($session->pupilPresences->where('status', 'presence')->pluck('pupil_id')) }},
+                                presentPupilIds: {{ Js::from($session->present_pupil_ids) }},
                             })"
                                             class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs text-gray-500 hover:bg-gray-100 transition">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
@@ -404,8 +399,9 @@
                     @php
                         $ws = \Carbon\Carbon::parse($weekKey);
                         $we = $ws->copy()->endOfWeek(\Carbon\Carbon::SUNDAY);
-                        $earned = $presences->sum(fn($p) => $p->earned);
-                        $hadir = $presences->where('status', 'presence')->count();
+                        // Ringkasan sudah dihitung di controller
+                        $earned = $historySummary[$weekKey]['earned'];
+                        $hadir  = $historySummary[$weekKey]['hadir'];
                     @endphp
                     <details class="group">
                         <summary
@@ -417,7 +413,7 @@
                                 <span class="text-sm font-medium text-gray-700 truncate">
                                     {{ $ws->translatedFormat('d M') }} – {{ $we->translatedFormat('d M Y') }}
                                 </span>
-                                <span class="text-xs text-gray-400 shrink-0">{{ $presences->count() }} sesi ·
+                                <span class="text-xs text-gray-400 shrink-0">{{ $historySummary[$weekKey]['count'] }} sesi ·
                                     {{ $hadir }} hadir</span>
                             </div>
                             <div class="flex items-center gap-2 shrink-0">
