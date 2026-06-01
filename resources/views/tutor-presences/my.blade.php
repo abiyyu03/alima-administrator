@@ -271,7 +271,6 @@
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Tanggal Sesi</label>
                                 <input type="date" name="date" required value="{{ now()->format('Y-m-d') }}"
-                                    min="{{ $weekStart->format('Y-m-d') }}" max="{{ $weekEnd->format('Y-m-d') }}"
                                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400">
                             </div>
 

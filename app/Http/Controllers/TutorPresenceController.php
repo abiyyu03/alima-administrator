@@ -392,7 +392,7 @@ class TutorPresenceController extends Controller
             $this->syncSalary($presence, $amount);
         });
 
-        return redirect()->route('my-presences', ['date' => $validated['week'] ?? $validated['date']])
+        return redirect()->route('my-presences', ['date' => $validated['date']])
             ->with('success', 'Presensi berhasil dicatat.');
     }
 
