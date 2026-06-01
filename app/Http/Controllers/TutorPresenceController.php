@@ -404,7 +404,7 @@ class TutorPresenceController extends Controller
         $user = Auth::user();
         $tutor = $user->tutor;
 
-        if (! $tutor || $presence->tutor_id !== $tutor->id) abort(403);
+        if (! $tutor || (int) $presence->tutor_id !== (int) $tutor->id) abort(403);
 
         $validated = $request->validate([
             'note'         => 'nullable|string|max:500',
@@ -556,7 +556,7 @@ class TutorPresenceController extends Controller
     {
         $tutor = Auth::user()->tutor;
 
-        if (! $tutor || $presence->tutor_id !== $tutor->id) abort(403);
+        if (! $tutor || (int) $presence->tutor_id !== (int) $tutor->id) abort(403);
 
         $week = $presence->classSession?->date
             ? \Carbon\Carbon::parse($presence->classSession->date)->startOfWeek(\Carbon\Carbon::MONDAY)->format('Y-m-d')

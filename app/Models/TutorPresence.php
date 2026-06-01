@@ -10,7 +10,10 @@ class TutorPresence extends Model
 
     protected function casts(): array
     {
-        return ['amount' => 'decimal:2'];
+        return [
+            'tutor_id'         => 'integer',
+            'class_session_id' => 'integer',
+        ];
     }
 
     public function getEarnedAttribute(): float
