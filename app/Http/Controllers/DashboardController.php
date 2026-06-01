@@ -8,7 +8,6 @@ use App\Models\PupilPresence;
 use App\Models\SchoolClass;
 use App\Models\Tutor;
 use App\Models\TutorPresence;
-use App\Models\TutorSalary;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -39,12 +38,15 @@ class DashboardController extends Controller
         $monthEnd   = $now->copy()->endOfMonth();
 
         // Stat cards
-        $gajiBulanIni = TutorSalary::where('tutor_id', $tutor->id)
-            ->whereHas('presence.classSession', fn($q) =>
+        // Source of truth: tutor_presences.amount (tutor_salaries hanya write-only, dipakai sebagai pembanding)
+        $gajiBulanIni = TutorPresence::where('tutor_id', $tutor->id)
+            ->where('status', 'presence')
+            ->whereHas('classSession', fn($q) =>
                 $q->whereBetween('date', [$monthStart, $monthEnd])
-            )->sum('salary');
+            )->sum('amount');
 
-        $gajiTotal = TutorSalary::where('tutor_id', $tutor->id)->sum('salary');
+        $gajiTotal = TutorPresence::where('tutor_id', $tutor->id)
+            ->where('status', 'presence')->sum('amount');
 
         $sesiBulanIni = TutorPresence::where('tutor_id', $tutor->id)
             ->where('status', 'presence')
@@ -64,10 +66,11 @@ class DashboardController extends Controller
 
             $weeks[] = [
                 'label' => $wStart->format('d/m'),
-                'gaji'  => TutorSalary::where('tutor_id', $tutor->id)
-                    ->whereHas('presence.classSession', fn($q) =>
+                'gaji'  => TutorPresence::where('tutor_id', $tutor->id)
+                    ->where('status', 'presence')
+                    ->whereHas('classSession', fn($q) =>
                         $q->whereBetween('date', [$wStart, $wEnd])
-                    )->sum('salary'),
+                    )->sum('amount'),
                 'sesi'  => TutorPresence::where('tutor_id', $tutor->id)
                     ->where('status', 'presence')
                     ->whereHas('classSession', fn($q) =>
@@ -104,9 +107,10 @@ class DashboardController extends Controller
         $totalClasses       = SchoolClass::count();
         $totalSessionsToday = ClassSession::whereDate('date', today())->count();
 
-        $gajiTutorBulanIni = TutorSalary::whereHas('presence.classSession', fn($q) =>
-            $q->whereBetween('date', [$monthStart, $monthEnd])
-        )->sum('salary');
+        $gajiTutorBulanIni = TutorPresence::where('status', 'presence')
+            ->whereHas('classSession', fn($q) =>
+                $q->whereBetween('date', [$monthStart, $monthEnd])
+            )->sum('amount');
 
         $tagihanDevBulanIni = PupilPresence::where('status', 'presence')
             ->whereHas('classSession', fn($q) =>
@@ -130,8 +134,9 @@ class DashboardController extends Controller
             $cursor->addWeek();
         }
 
-        $topTutors = TutorSalary::select('tutor_id', DB::raw('SUM(salary) as total'))
-            ->whereHas('presence.classSession', fn($q) =>
+        $topTutors = TutorPresence::select('tutor_id', DB::raw('SUM(amount) as total'))
+            ->where('status', 'presence')
+            ->whereHas('classSession', fn($q) =>
                 $q->whereBetween('date', [$monthStart, $monthEnd])
             )
             ->with('tutor')
