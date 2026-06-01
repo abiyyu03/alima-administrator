@@ -279,8 +279,8 @@
                                                         note: '{{ addslashes($p->note ?? '') }}',
                                                         material: '{{ addslashes($session->material ?? '') }}',
                                                         photoUrl: '{{ $session->photo_file ? Storage::url($session->photo_file) : '' }}',
-                                                        pupils: @json($session->is_regular ? $session->schoolClass->pupils->map(fn($pu) => ['id' => $pu->id, 'name' => $pu->name, 'code' => $pu->code]) : []),
-                                                        presentPupilIds: @json($session->present_pupil_ids),
+                                                        pupils: {{ Js::from($session->is_regular ? $session->schoolClass->pupils->map(fn($pu) => ['id' => $pu->id, 'name' => $pu->name, 'code' => $pu->code]) : []) }},
+                                                        presentPupilIds: {{ Js::from($session->present_pupil_ids) }},
                                                     })"
                                                     class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs text-gray-600 hover:bg-gray-50 transition">
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
