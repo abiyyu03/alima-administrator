@@ -17,6 +17,29 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Alima">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    {{-- Store deleteConfirm didefinisikan inline agar tidak bergantung pada bundle JS hasil compile
+         (deploy via git pull tanpa build). Aman walau app.js juga mendefinisikannya. --}}
+    <script>
+        document.addEventListener('alpine:init', () => {
+            window.Alpine.store('deleteConfirm', {
+                open: false,
+                message: '',
+                formId: '',
+                show(message, formId) {
+                    this.message = message;
+                    this.formId  = formId;
+                    this.open    = true;
+                },
+                confirm() {
+                    document.getElementById(this.formId)?.submit();
+                    this.open = false;
+                },
+                cancel() {
+                    this.open = false;
+                },
+            });
+        });
+    </script>
     @stack('styles')
 </head>
 <body class="bg-gray-100 font-sans antialiased">
