@@ -103,6 +103,14 @@ class TutorPresenceController extends Controller
         $rate      = self::getRate($presence->classSession, $presence->tutor_id);
         $isPrivate = strtolower($presence->classSession->schoolClass->courseType?->name ?? '') === 'private';
 
+        // Sesi private yang anaknya sudah dihapus: jangan lanjut (insert pupil_presences akan langgar FK)
+        if ($isPrivate
+            && $presence->classSession->pupil_id
+            && ! \App\Models\Pupil::whereKey($presence->classSession->pupil_id)->exists()
+        ) {
+            return back()->with('error', 'Data murid untuk sesi ini sudah tidak tersedia. Silakan hubungi admin untuk memeriksa data siswa.');
+        }
+
         DB::transaction(function () use ($presence, $validated, $rate, $request, $isPrivate) {
             $sessionUpdate = ['material' => $validated['material'] ?? null];
             if (! empty($validated['session_date'])) {
@@ -413,6 +421,14 @@ class TutorPresenceController extends Controller
         $presence->load('classSession.schoolClass.courseType');
         $rate      = self::getRate($presence->classSession, $tutor->id);
         $isPrivate = strtolower($presence->classSession->schoolClass->courseType?->name ?? '') === 'private';
+
+        // Sesi private yang anaknya sudah dihapus: jangan lanjut (insert pupil_presences akan langgar FK)
+        if ($isPrivate
+            && $presence->classSession->pupil_id
+            && ! \App\Models\Pupil::whereKey($presence->classSession->pupil_id)->exists()
+        ) {
+            return back()->with('error', 'Data murid untuk sesi ini sudah tidak tersedia. Silakan hubungi admin untuk memeriksa data siswa.');
+        }
 
         DB::transaction(function () use ($presence, $validated, $rate, $request, $isPrivate) {
             $sessionUpdate = ['material' => $validated['material'] ?? null];

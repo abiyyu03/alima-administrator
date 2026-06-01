@@ -100,6 +100,14 @@ class PupilController extends Controller
 
     public function destroy(Pupil $pupil)
     {
+        // Cegah hapus anak yang masih punya riwayat: hindari sesi/presensi yatim (FK rusak).
+        $hasPresences = $pupil->presences()->exists();
+        $hasSessions  = \App\Models\ClassSession::where('pupil_id', $pupil->id)->exists();
+
+        if ($hasPresences || $hasSessions) {
+            return back()->with('error', 'Siswa tidak dapat dihapus karena masih memiliki riwayat sesi/presensi. Nonaktifkan siswa ini sebagai gantinya.');
+        }
+
         $pupil->delete();
 
         return back()->with('success', 'Siswa berhasil dihapus.');
